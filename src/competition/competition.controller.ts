@@ -1,12 +1,13 @@
-import { Controller, Get, Post, Patch, Delete, Body, Param, Res, HttpStatus, ParseIntPipe, Query } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiQuery } from '@nestjs/swagger';
-import { Response } from 'express';
+import { Controller, Get, Post, Patch, Delete, Body, Param, Res, HttpStatus, ParseIntPipe, Query, UseGuards, Req } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
+import { Response, Request } from 'express';
 import { CompetitionService } from './competition.service';
 import { CreateCompetitionDto } from './dto/create-competition.dto';
 import { UpdateCompetitionDto } from './dto/update-competition.dto';
 import { sendSuccess, sendError } from '@/common/utils/response.util';
 import { SuccessResponseDto, ErrorResponseDto } from '@/common/dto/common-response.dto';
 import { Competition } from './entities/competition.entity';
+import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 
 /**
  * 대회 컨트롤러
@@ -101,6 +102,7 @@ export class CompetitionController {
                   description: { type: 'string', example: '대회 설명...' },
                   region: { type: 'string', example: '서울' },
                   type: { type: 'string', example: 'championship' },
+                  master_idx: { type: 'number', example: 1 },
                   status: { type: 'string', example: 'registration' },
                   start_date: { type: 'string', example: '2024-06-01' },
                   request_start_date: { type: 'string', example: '2024-05-01' },
@@ -131,14 +133,53 @@ export class CompetitionController {
   }
 
   /**
-   * 주최자별 대회 목록 조회
+   * 주최자별 대회 목록 조회 (현재 로그인한 사용자의 대회 목록)
    */
-  @Get('master/:masterIdx')
-  @ApiOperation({ summary: '주최자별 대회 목록 조회', description: '특정 주최자의 대회 목록을 조회합니다.' })
-  @ApiParam({ name: 'masterIdx', description: '주최자 idx', type: Number, example: 1 })
-  @ApiResponse({ status: 200, description: '대회 목록 조회 성공' })
-  async findByMaster(@Param('masterIdx', ParseIntPipe) masterIdx: number, @Res() res: Response): Promise<void> {
+  @Get('master')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: '내 대회 목록 조회', description: 'JWT 토큰에서 사용자 정보를 추출하여 현재 로그인한 사용자의 대회 목록을 조회합니다.' })
+  @ApiResponse({ 
+    status: 200, 
+    description: '대회 목록 조회 성공',
+    schema: {
+      properties: {
+        success: { type: 'boolean', example: true },
+        message: { type: 'string', example: '대회 목록을 조회했습니다.' },
+        data: {
+          type: 'object',
+          properties: {
+            competitions: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  idx: { type: 'number', example: 1 },
+                  name: { type: 'string', example: '2024 전국 유도 선수권대회' },
+                  description: { type: 'string', example: '대회 설명...' },
+                  region: { type: 'string', example: '서울' },
+                  type: { type: 'string', example: 'championship' },
+                  master_idx: { type: 'number', example: 1 },
+                  status: { type: 'string', example: 'registration' },
+                  start_date: { type: 'string', example: '2024-06-01' },
+                  request_start_date: { type: 'string', example: '2024-05-01' },
+                  request_end_date: { type: 'string', example: '2024-05-31' },
+                  created_at: { type: 'string', example: '2024-01-01T00:00:00.000Z' }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  })
+  @ApiResponse({ status: 401, description: '인증 실패' })
+  async findByMaster(@Req() req: Request, @Res() res: Response): Promise<void> {
     try {
+      // JWT 토큰에서 사용자 정보 추출
+      const tokenPayload = (req as any).user;
+      const masterIdx = tokenPayload.sub;
+
       const competitions = await this.competitionService.findByMaster(masterIdx);
       sendSuccess(res, '대회 목록을 조회했습니다.', { competitions });
     } catch (error) {

@@ -1,6 +1,6 @@
 import { Entity, Column, Index, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
 import { BaseEntity } from '@/common/entities/base.entity';
-import { IsNotEmpty, IsString, IsEnum, IsDateString, IsOptional } from 'class-validator';
+import { IsNotEmpty, IsString, IsEnum, IsOptional } from 'class-validator';
 import { User } from '@/user/entities/user.entity';
 import { Mat } from '@/mat/entities/mat.entity';
 import { Group } from '@/group/entities/group.entity';
@@ -13,16 +13,6 @@ export enum CompetitionStatus {
   CLOSED = 'closed', // 모집마감
   IN_PROGRESS = 'in_progress', // 진행중
   COMPLETED = 'completed', // 종료
-}
-
-/**
- * 대회 타입 열거형
- */
-export enum CompetitionType {
-  CHAMPIONSHIP = 'championship', // 선수권
-  OPEN = 'open', // 오픈
-  LEAGUE = 'league', // 리그
-  CUSTOM = 'custom', // 기타
 }
 
 /**
@@ -69,15 +59,14 @@ export class Competition extends BaseEntity {
   region: string;
 
   @Column({
-    type: 'enum',
-    enum: CompetitionType,
+    type: 'varchar',
+    length: 50,
     nullable: false,
-    default: CompetitionType.CUSTOM,
     comment: '대회 타입'
   })
   @IsNotEmpty({ message: '대회 타입은 필수입니다.' })
-  @IsEnum(CompetitionType, { message: '올바른 대회 타입이 아닙니다.' })
-  type: CompetitionType;
+  @IsString({ message: '대회 타입은 문자열이어야 합니다.' })
+  type: string;
 
   @Column({
     type: 'int',
@@ -88,31 +77,34 @@ export class Competition extends BaseEntity {
   master_idx: number;
 
   @Column({
-    type: 'date',
+    type: 'varchar',
+    length: 10,
     nullable: false,
-    comment: '대회 시작일'
+    comment: '대회 시작일 (YYYY-MM-DD)'
   })
   @IsNotEmpty({ message: '대회 시작일은 필수입니다.' })
-  @IsDateString({}, { message: '올바른 날짜 형식이 아닙니다.' })
-  start_date: Date;
+  @IsString({ message: '대회 시작일은 문자열이어야 합니다.' })
+  start_date: string;
 
   @Column({
-    type: 'date',
+    type: 'varchar',
+    length: 10,
     nullable: true,
-    comment: '접수 시작일'
+    comment: '접수 시작일 (YYYY-MM-DD)'
   })
   @IsOptional()
-  @IsDateString({}, { message: '올바른 날짜 형식이 아닙니다.' })
-  request_start_date: Date | null;
+  @IsString({ message: '접수 시작일은 문자열이어야 합니다.' })
+  request_start_date: string | null;
 
   @Column({
-    type: 'date',
+    type: 'varchar',
+    length: 10,
     nullable: true,
-    comment: '접수 마감일'
+    comment: '접수 마감일 (YYYY-MM-DD)'
   })
   @IsOptional()
-  @IsDateString({}, { message: '올바른 날짜 형식이 아닙니다.' })
-  request_end_date: Date | null;
+  @IsString({ message: '접수 마감일은 문자열이어야 합니다.' })
+  request_end_date: string | null;
 
   @Column({
     type: 'enum',

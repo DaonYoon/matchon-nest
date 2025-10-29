@@ -1,6 +1,6 @@
-import { IsNotEmpty, IsString, IsEnum, IsDateString, IsOptional } from 'class-validator';
+import { IsNotEmpty, IsString, IsEnum, IsOptional, Matches } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { CompetitionType, CompetitionStatus } from '../entities/competition.entity';
+import { CompetitionStatus } from '../entities/competition.entity';
 
 /**
  * 대회 생성 DTO
@@ -21,10 +21,10 @@ export class CreateCompetitionDto {
   @IsString({ message: '지역은 문자열이어야 합니다.' })
   region: string;
 
-  @ApiProperty({ description: '대회 타입', enum: CompetitionType, example: CompetitionType.CHAMPIONSHIP })
+  @ApiProperty({ description: '대회 타입', example: 'championship' })
   @IsNotEmpty({ message: '대회 타입은 필수입니다.' })
-  @IsEnum(CompetitionType, { message: '올바른 대회 타입이 아닙니다.' })
-  type: CompetitionType;
+  @IsString({ message: '대회 타입은 문자열이어야 합니다.' })
+  type: string;
 
   @ApiProperty({ description: '주최자 유저 idx', example: 1 })
   @IsNotEmpty({ message: '주최자 idx는 필수입니다.' })
@@ -32,17 +32,20 @@ export class CreateCompetitionDto {
 
   @ApiProperty({ description: '대회 시작일 (YYYY-MM-DD)', example: '2024-06-01' })
   @IsNotEmpty({ message: '대회 시작일은 필수입니다.' })
-  @IsDateString({}, { message: '올바른 날짜 형식이 아닙니다.' })
+  @IsString({ message: '대회 시작일은 문자열이어야 합니다.' })
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: '올바른 날짜 형식이 아닙니다. YYYY-MM-DD 형식으로 입력해주세요.' })
   start_date: string;
 
   @ApiPropertyOptional({ description: '접수 시작일 (YYYY-MM-DD)', example: '2024-05-01' })
   @IsOptional()
-  @IsDateString({}, { message: '올바른 날짜 형식이 아닙니다.' })
+  @IsString({ message: '접수 시작일은 문자열이어야 합니다.' })
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: '올바른 날짜 형식이 아닙니다. YYYY-MM-DD 형식으로 입력해주세요.' })
   request_start_date?: string;
 
   @ApiPropertyOptional({ description: '접수 마감일 (YYYY-MM-DD)', example: '2024-05-31' })
   @IsOptional()
-  @IsDateString({}, { message: '올바른 날짜 형식이 아닙니다.' })
+  @IsString({ message: '접수 마감일은 문자열이어야 합니다.' })
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: '올바른 날짜 형식이 아닙니다. YYYY-MM-DD 형식으로 입력해주세요.' })
   request_end_date?: string;
 
   @ApiPropertyOptional({ description: '대회 상태', enum: CompetitionStatus, example: CompetitionStatus.REGISTRATION, default: CompetitionStatus.REGISTRATION })
