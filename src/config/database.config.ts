@@ -19,7 +19,7 @@ export const createDatabaseConfig = (configService: ConfigService): TypeOrmModul
   database: configService.get('DB_DATABASE', 'myplace_db'),
   entities: [User, Competition, Mat, Group, Player],
   synchronize: configService.get('NODE_ENV') !== 'production',
-  logging: configService.get('NODE_ENV') === 'development',
+  logging: false, // DB 쿼리 로그 비활성화
   timezone: '+09:00',
   charset: 'utf8mb4',
   extra: {

@@ -3,8 +3,11 @@ import {
   CanActivate,
   ExecutionContext,
   UnauthorizedException,
+  BadRequestException,
+  InternalServerErrorException,
 } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
+import { ConfigService } from "@nestjs/config";
 import { Request, Response } from "express";
 import { jwtConfig, refreshTokenConfig } from "@/config/jwt.config";
 
@@ -16,7 +19,10 @@ import { jwtConfig, refreshTokenConfig } from "@/config/jwt.config";
  */
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
-  constructor(private readonly jwtService: JwtService) {}
+  constructor(
+    private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
+  ) {}
 
   /**
    * 인증 처리
@@ -36,9 +42,15 @@ export class JwtAuthGuard implements CanActivate {
     }
 
     try {
+      // JWT secret 설정 확인
+      const jwtSecret = this.configService.get<string>('JWT_SECRET') || jwtConfig.secret;
+      if (!jwtSecret) {
+        throw new InternalServerErrorException("JWT 시크릿이 설정되지 않았습니다.");
+      }
+
       // access_token 검증
       const payload = await this.jwtService.verifyAsync(accessToken, {
-        secret: jwtConfig.secret,
+        secret: jwtSecret,
       });
 
       // 토큰 타입 확인
@@ -51,22 +63,28 @@ export class JwtAuthGuard implements CanActivate {
       (request as any).user = payload;
       return true;
     } catch (error) {
-      // 이미 UnauthorizedException인 경우 그대로 던짐
-      if (error instanceof UnauthorizedException) {
+      // 이미 UnauthorizedException 또는 InternalServerErrorException인 경우 그대로 던짐
+      if (error instanceof UnauthorizedException || error instanceof InternalServerErrorException) {
         throw error;
       }
-      
-      // access_token이 만료되었으면 refresh_token으로 갱신 시도
+
+      // JWT secret 관련 에러는 500으로 처리
       if (
-        error.name === "TokenExpiredError" ||
-        error.name === "JsonWebTokenError"
+        error.message &&
+        (error.message.includes("secretOrPrivateKey must have a value") ||
+         error.message.includes("secret") && error.message.includes("undefined"))
       ) {
+        throw new InternalServerErrorException("JWT 설정 오류가 발생했습니다.");
+      }
+      
+      // access_token이 만료되었으면 refresh_token으로 갱신 시도 (401)
+      if (error.name === "TokenExpiredError") {
         return await this.handleTokenRefresh(request, response, refreshToken);
       }
 
-      // 기타 에러인 경우 쿠키 삭제 후 예외 발생
+      // 토큰이 유효하지 않은 경우 (400)
       this.clearTokens(response);
-      throw new UnauthorizedException("유효하지 않은 토큰입니다.");
+      throw new BadRequestException("유효하지 않은 토큰입니다.");
     }
   }
 
@@ -89,9 +107,17 @@ export class JwtAuthGuard implements CanActivate {
     }
 
     try {
+      // JWT secret 설정 확인
+      const jwtSecret = this.configService.get<string>('JWT_SECRET') || jwtConfig.secret;
+      const refreshSecret = this.configService.get<string>('JWT_REFRESH_SECRET') || refreshTokenConfig.secret;
+      
+      if (!jwtSecret || !refreshSecret) {
+        throw new InternalServerErrorException("JWT 시크릿이 설정되지 않았습니다.");
+      }
+
       // refresh_token 검증
       const refreshPayload = await this.jwtService.verifyAsync(refreshToken, {
-        secret: refreshTokenConfig.secret,
+        secret: refreshSecret,
       });
 
       if (refreshPayload.type !== "refresh") {
@@ -107,7 +133,10 @@ export class JwtAuthGuard implements CanActivate {
           name: refreshPayload.name,
           type: "access",
         },
-        jwtConfig.signOptions
+        {
+          ...jwtConfig.signOptions,
+          secret: jwtSecret,
+        }
       );
 
       const newRefreshToken = this.jwtService.sign(
@@ -118,7 +147,7 @@ export class JwtAuthGuard implements CanActivate {
           type: "refresh",
         },
         {
-          secret: refreshTokenConfig.secret,
+          secret: refreshSecret,
           expiresIn: refreshTokenConfig.expiresIn,
         }
       );
@@ -139,13 +168,27 @@ export class JwtAuthGuard implements CanActivate {
       // refresh_token이 만료되었거나 유효하지 않으면 쿠키 삭제
       this.clearTokens(response);
       
-      // 이미 UnauthorizedException인 경우 그대로 던짐
-      if (error instanceof UnauthorizedException) {
+      // 이미 UnauthorizedException 또는 InternalServerErrorException인 경우 그대로 던짐
+      if (error instanceof UnauthorizedException || error instanceof InternalServerErrorException) {
         throw error;
       }
+
+      // JWT secret 관련 에러는 500으로 처리
+      if (
+        error.message &&
+        (error.message.includes("secretOrPrivateKey must have a value") ||
+         error.message.includes("secret") && error.message.includes("undefined"))
+      ) {
+        throw new InternalServerErrorException("JWT 설정 오류가 발생했습니다.");
+      }
       
-      // 다른 에러인 경우 새로운 예외 던지기
-      throw new UnauthorizedException("인증이 만료되었습니다. 다시 로그인해주세요.");
+      // refresh_token이 만료된 경우 (401)
+      if (error.name === "TokenExpiredError") {
+        throw new UnauthorizedException("인증이 만료되었습니다. 다시 로그인해주세요.");
+      }
+      
+      // 다른 에러인 경우 400 예외 발생
+      throw new BadRequestException("유효하지 않은 토큰입니다.");
     }
   }
 
@@ -173,18 +216,20 @@ export class JwtAuthGuard implements CanActivate {
     accessToken: string,
     refreshToken: string
   ): void {
+    // withCredentials 지원을 위해 sameSite 조정
+    const isProduction = process.env.NODE_ENV === "production";
     response.cookie("access_token", accessToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      secure: isProduction,
+      sameSite: isProduction ? "none" : "lax",
       maxAge: 60 * 60 * 1000, // 1시간
       path: "/",
     });
 
     response.cookie("refresh_token", refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      secure: isProduction,
+      sameSite: isProduction ? "none" : "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7일
       path: "/",
     });
@@ -196,10 +241,16 @@ export class JwtAuthGuard implements CanActivate {
    */
   private clearTokens(response: Response): void {
     // 쿠키 삭제 옵션 설정 (설정된 옵션과 동일하게 설정해야 완전히 삭제됨)
-    const cookieOptions = {
+    const isProduction = process.env.NODE_ENV === "production";
+    const cookieOptions: {
+      httpOnly: boolean;
+      secure: boolean;
+      sameSite: 'strict' | 'lax' | 'none';
+      path: string;
+    } = {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict" as const,
+      secure: isProduction,
+      sameSite: isProduction ? "none" : "lax",
       path: "/",
     };
     

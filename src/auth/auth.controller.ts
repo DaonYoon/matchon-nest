@@ -46,19 +46,20 @@ export class AuthController {
     try {
       const { user, tokens } = await this.authService.login(loginDto);
 
-      // 쿠키에 토큰 설정
+      // 쿠키에 토큰 설정 (withCredentials 지원을 위해 sameSite 조정)
+      const isProduction = process.env.NODE_ENV === 'production';
       res.cookie('access_token', tokens.accessToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        secure: isProduction,
+        sameSite: isProduction ? 'none' : 'lax',
         maxAge: 60 * 60 * 1000, // 1시간 (밀리초)
         path: '/',
       });
 
       res.cookie('refresh_token', tokens.refreshToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        secure: isProduction,
+        sameSite: isProduction ? 'none' : 'lax',
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7일 (밀리초)
         path: '/',
       });
@@ -89,19 +90,20 @@ export class AuthController {
 
       const tokens = await this.authService.refreshAccessToken(refreshToken);
 
-      // 새로운 토큰을 쿠키에 설정
+      // 새로운 토큰을 쿠키에 설정 (withCredentials 지원을 위해 sameSite 조정)
+      const isProduction = process.env.NODE_ENV === 'production';
       res.cookie('access_token', tokens.accessToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        secure: isProduction,
+        sameSite: isProduction ? 'none' : 'lax',
         maxAge: 60 * 60 * 1000, // 1시간
         path: '/',
       });
 
       res.cookie('refresh_token', tokens.refreshToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        secure: isProduction,
+        sameSite: isProduction ? 'none' : 'lax',
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7일
         path: '/',
       });
@@ -115,15 +117,32 @@ export class AuthController {
 
   /**
    * 로그아웃
+   * 쿠키의 access_token과 refresh_token을 삭제하고 응답 반환
+   * 인증 가드 없이 동작하여 토큰이 만료되었거나 유효하지 않아도 쿠키 삭제 가능
    * @param res HTTP 응답 객체
    */
   @Post('logout')
-  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: '로그아웃', description: '쿠키에 저장된 access_token과 refresh_token을 삭제합니다.' })
+  @ApiResponse({ status: 200, description: '로그아웃 성공' })
   async logout(@Res() res: Response): Promise<void> {
     try {
-      // 쿠키 삭제
-      res.clearCookie('access_token', { path: '/' });
-      res.clearCookie('refresh_token', { path: '/' });
+      // 쿠키 삭제 (설정된 옵션과 동일하게 설정해야 완전히 삭제됨)
+      const isProduction = process.env.NODE_ENV === 'production';
+      const cookieOptions: {
+        httpOnly: boolean;
+        secure: boolean;
+        sameSite: 'strict' | 'lax' | 'none';
+        path: string;
+      } = {
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: isProduction ? 'none' : 'lax',
+        path: '/',
+      };
+      
+      // 쿠키 내의 토큰 삭제
+      res.clearCookie('access_token', cookieOptions);
+      res.clearCookie('refresh_token', cookieOptions);
 
       sendSuccess(res, '로그아웃되었습니다.');
     } catch (error) {

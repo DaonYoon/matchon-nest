@@ -42,6 +42,8 @@ export class CompetitionController {
                 type: { type: 'string', example: 'championship' },
                 master_idx: { type: 'number', example: 1 },
                 start_date: { type: 'string', example: '2024-06-01' },
+                request_start_date: { type: 'string', example: '2024-05-01' },
+                request_end_date: { type: 'string', example: '2024-05-31' },
                 status: { type: 'string', example: 'registration' },
                 created_at: { type: 'string', example: '2024-01-01T00:00:00.000Z' },
                 updated_at: { type: 'string', example: '2024-01-01T00:00:00.000Z' },
@@ -101,6 +103,8 @@ export class CompetitionController {
                   type: { type: 'string', example: 'championship' },
                   status: { type: 'string', example: 'registration' },
                   start_date: { type: 'string', example: '2024-06-01' },
+                  request_start_date: { type: 'string', example: '2024-05-01' },
+                  request_end_date: { type: 'string', example: '2024-05-31' },
                   created_at: { type: 'string', example: '2024-01-01T00:00:00.000Z' }
                 }
               }
@@ -169,6 +173,8 @@ export class CompetitionController {
                 type: { type: 'string', example: 'championship' },
                 master_idx: { type: 'number', example: 1 },
                 start_date: { type: 'string', example: '2024-06-01' },
+                request_start_date: { type: 'string', example: '2024-05-01' },
+                request_end_date: { type: 'string', example: '2024-05-31' },
                 status: { type: 'string', example: 'registration' },
                 created_at: { type: 'string', example: '2024-01-01T00:00:00.000Z' },
                 updated_at: { type: 'string', example: '2024-01-01T00:00:00.000Z' }

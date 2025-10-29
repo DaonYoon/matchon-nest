@@ -97,6 +97,24 @@ export class Competition extends BaseEntity {
   start_date: Date;
 
   @Column({
+    type: 'date',
+    nullable: true,
+    comment: '접수 시작일'
+  })
+  @IsOptional()
+  @IsDateString({}, { message: '올바른 날짜 형식이 아닙니다.' })
+  request_start_date: Date | null;
+
+  @Column({
+    type: 'date',
+    nullable: true,
+    comment: '접수 마감일'
+  })
+  @IsOptional()
+  @IsDateString({}, { message: '올바른 날짜 형식이 아닙니다.' })
+  request_end_date: Date | null;
+
+  @Column({
     type: 'enum',
     enum: CompetitionStatus,
     nullable: false,

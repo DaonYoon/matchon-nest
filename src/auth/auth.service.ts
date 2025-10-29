@@ -1,7 +1,8 @@
-import { Injectable, UnauthorizedException, BadRequestException, ConflictException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, BadRequestException, ConflictException, InternalServerErrorException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
 import { User } from '@/user/entities/user.entity';
 import { jwtConfig, refreshTokenConfig } from '@/config/jwt.config';
@@ -28,6 +29,7 @@ export class AuthService {
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
   ) {}
 
   /**
@@ -133,6 +135,18 @@ export class AuthService {
    * @returns 토큰 객체
    */
   async generateTokens(user: User): Promise<{ accessToken: string; refreshToken: string }> {
+    // JWT secret 확인
+    const jwtSecret = this.configService.get<string>('JWT_SECRET') || jwtConfig.secret;
+    const refreshSecret = this.configService.get<string>('JWT_REFRESH_SECRET') || refreshTokenConfig.secret;
+
+    if (!jwtSecret) {
+      throw new InternalServerErrorException('JWT_SECRET이 설정되지 않았습니다.');
+    }
+
+    if (!refreshSecret) {
+      throw new InternalServerErrorException('JWT_REFRESH_SECRET이 설정되지 않았습니다.');
+    }
+
     const accessPayload: TokenPayload = {
       sub: user.idx,
       email: user.email,
@@ -147,9 +161,12 @@ export class AuthService {
       type: 'refresh',
     };
 
-    const accessToken = this.jwtService.sign(accessPayload, jwtConfig.signOptions);
+    const accessToken = this.jwtService.sign(accessPayload, {
+      ...jwtConfig.signOptions,
+      secret: jwtSecret,
+    });
     const refreshToken = this.jwtService.sign(refreshPayload, {
-      secret: refreshTokenConfig.secret,
+      secret: refreshSecret,
       expiresIn: refreshTokenConfig.expiresIn,
     });
 
@@ -163,9 +180,16 @@ export class AuthService {
    */
   async refreshAccessToken(refreshToken: string): Promise<{ accessToken: string; refreshToken: string }> {
     try {
+      // Refresh Token secret 확인
+      const refreshSecret = this.configService.get<string>('JWT_REFRESH_SECRET') || refreshTokenConfig.secret;
+      
+      if (!refreshSecret) {
+        throw new InternalServerErrorException('JWT_REFRESH_SECRET이 설정되지 않았습니다.');
+      }
+
       // Refresh Token 검증
       const payload = this.jwtService.verify(refreshToken, {
-        secret: refreshTokenConfig.secret,
+        secret: refreshSecret,
       }) as TokenPayload;
 
       if (payload.type !== 'refresh') {
@@ -184,6 +208,9 @@ export class AuthService {
       // 새로운 토큰 생성
       return await this.generateTokens(user);
     } catch (error) {
+      if (error instanceof UnauthorizedException || error instanceof InternalServerErrorException) {
+        throw error;
+      }
       throw new UnauthorizedException('토큰 갱신에 실패했습니다.');
     }
   }

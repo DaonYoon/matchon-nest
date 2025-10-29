@@ -31,6 +31,16 @@ export class UpdateCompetitionDto {
   @IsDateString({}, { message: '올바른 날짜 형식이 아닙니다.' })
   start_date?: string;
 
+  @ApiPropertyOptional({ description: '접수 시작일 (YYYY-MM-DD)', example: '2024-05-01' })
+  @IsOptional()
+  @IsDateString({}, { message: '올바른 날짜 형식이 아닙니다.' })
+  request_start_date?: string;
+
+  @ApiPropertyOptional({ description: '접수 마감일 (YYYY-MM-DD)', example: '2024-05-31' })
+  @IsOptional()
+  @IsDateString({}, { message: '올바른 날짜 형식이 아닙니다.' })
+  request_end_date?: string;
+
   @ApiPropertyOptional({ description: '대회 상태', enum: CompetitionStatus, example: CompetitionStatus.CLOSED })
   @IsOptional()
   @IsEnum(CompetitionStatus, { message: '올바른 대회 상태가 아닙니다.' })
