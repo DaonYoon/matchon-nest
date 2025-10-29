@@ -1,6 +1,10 @@
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { ConfigService } from '@nestjs/config';
 import { User } from '@/user/entities/user.entity';
+import { Competition } from '@/competition/entities/competition.entity';
+import { Mat } from '@/mat/entities/mat.entity';
+import { Group } from '@/group/entities/group.entity';
+import { Player } from '@/player/entities/player.entity';
 
 /**
  * TypeORM 데이터베이스 설정
@@ -13,7 +17,7 @@ export const createDatabaseConfig = (configService: ConfigService): TypeOrmModul
   username: configService.get('DB_USERNAME', 'root'),
   password: configService.get('DB_PASSWORD', ''),
   database: configService.get('DB_DATABASE', 'myplace_db'),
-  entities: [User],
+  entities: [User, Competition, Mat, Group, Player],
   synchronize: configService.get('NODE_ENV') !== 'production',
   logging: configService.get('NODE_ENV') === 'development',
   timezone: '+09:00',

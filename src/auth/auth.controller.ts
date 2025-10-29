@@ -1,4 +1,5 @@
 import { Controller, Post, Body, Res, HttpStatus, UseGuards, Req } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { Response, Request } from 'express';
 import { AuthService, LoginDto } from './auth.service';
 import { JoinDto } from './dto/join.dto';
@@ -9,6 +10,7 @@ import { sendSuccess, sendError } from '@/common/utils/response.util';
  * 인증 컨트롤러
  * 회원가입, 로그인, 토큰 갱신, 로그아웃 처리
  */
+@ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -35,6 +37,10 @@ export class AuthController {
    * @param res HTTP 응답 객체
    */
   @Post('login')
+  @ApiOperation({ summary: '로그인', description: '사용자 이름과 비밀번호로 로그인하여 JWT 토큰을 받습니다.' })
+  @ApiBody({ type: LoginDto })
+  @ApiResponse({ status: 200, description: '로그인 성공 (쿠키에 토큰 저장)' })
+  @ApiResponse({ status: 401, description: '로그인 실패 (잘못된 사용자명 또는 비밀번호)' })
   async login(@Body() loginDto: LoginDto, @Res() res: Response): Promise<void> {
     try {
       const { user, tokens } = await this.authService.login(loginDto);

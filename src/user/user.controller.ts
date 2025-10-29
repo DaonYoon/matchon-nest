@@ -1,4 +1,5 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Res, HttpStatus, UseGuards, ParseIntPipe } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
 import { Response } from 'express';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -9,6 +10,7 @@ import { sendSuccess, sendError } from '@/common/utils/response.util';
  * 사용자 컨트롤러
  * 사용자 관련 API 엔드포인트 제공
  */
+@ApiTags('Users')
 @Controller('users')
 export class UserController {
   constructor(private readonly userService: UserService) {}
@@ -35,6 +37,10 @@ export class UserController {
    */
   @Get()
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: '전체 사용자 조회', description: '모든 사용자 목록을 조회합니다. 로그인 필수.' })
+  @ApiBearerAuth('JWT-auth')
+  @ApiResponse({ status: 200, description: '사용자 목록 조회 성공' })
+  @ApiResponse({ status: 401, description: '인증 토큰이 필요합니다.' })
   async getAllUsers(@Res() res: Response): Promise<void> {
     try {
       const users = await this.userService.findAllUsers();

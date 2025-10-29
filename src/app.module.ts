@@ -5,6 +5,10 @@ import * as cookieParser from 'cookie-parser';
 import { createDatabaseConfig } from '@/config/database.config';
 import { AuthModule } from '@/auth/auth.module';
 import { UserModule } from '@/user/user.module';
+import { CompetitionModule } from '@/competition/competition.module';
+import { MatModule } from '@/mat/mat.module';
+import { GroupModule } from '@/group/group.module';
+import { PlayerModule } from '@/player/player.module';
 import { LoggingMiddleware } from '@/common/middleware/logging.middleware';
 
 /**
@@ -29,6 +33,10 @@ import { LoggingMiddleware } from '@/common/middleware/logging.middleware';
     // 기능 모듈들
     AuthModule,
     UserModule,
+    CompetitionModule,
+    MatModule,
+    GroupModule,
+    PlayerModule,
   ],
   controllers: [],
   providers: [],
