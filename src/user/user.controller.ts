@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Res, HttpStatus, UseGuards, ParseIntPipe } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
+import { Controller, Get, Post, Put, Delete, Body, Param, Res, HttpStatus, UseGuards, ParseIntPipe, Query } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { Response } from 'express';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -33,17 +33,27 @@ export class UserController {
 
   /**
    * 모든 사용자 조회
+   * @param offset 페이지 오프셋 (기본값: 0)
+   * @param limit 페이지당 개수 (기본값: 20)
    * @param res HTTP 응답 객체
    */
   @Get()
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: '전체 사용자 조회', description: '모든 사용자 목록을 조회합니다. 로그인 필수.' })
   @ApiBearerAuth('JWT-auth')
+  @ApiQuery({ name: 'offset', required: false, type: Number, description: '페이지 오프셋 (기본값: 0)', example: 0 })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: '페이지당 개수 (기본값: 20)', example: 20 })
   @ApiResponse({ status: 200, description: '사용자 목록 조회 성공' })
   @ApiResponse({ status: 401, description: '인증 토큰이 필요합니다.' })
-  async getAllUsers(@Res() res: Response): Promise<void> {
+  async getAllUsers(
+    @Res() res: Response,
+    @Query('offset') offset?: string,
+    @Query('limit') limit?: string
+  ): Promise<void> {
     try {
-      const users = await this.userService.findAllUsers();
+      const offsetNum = offset ? parseInt(offset, 10) : 0;
+      const limitNum = limit ? parseInt(limit, 10) : 20;
+      const users = await this.userService.findAllUsers(offsetNum, limitNum);
       sendSuccess(res, '사용자 목록을 조회했습니다.', { users });
     } catch (error) {
       sendError(res, error.message || '사용자 목록 조회 중 오류가 발생했습니다.', HttpStatus.INTERNAL_SERVER_ERROR);

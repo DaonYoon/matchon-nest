@@ -82,12 +82,16 @@ export class PlayerService {
 
   /**
    * 전체 선수 목록 조회
+   * @param offset 페이지 오프셋 (기본값: 0)
+   * @param limit 페이지당 개수 (기본값: 20)
    */
-  async findAll(): Promise<Player[]> {
+  async findAll(offset: number = 0, limit: number = 20): Promise<Player[]> {
     try {
       return await this.playerRepository.find({
         relations: ['group'],
         order: { created_at: 'DESC' },
+        skip: offset,
+        take: limit,
       });
     } catch (error) {
       throw new BadRequestException('선수 목록 조회에 실패했습니다.');

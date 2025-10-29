@@ -88,11 +88,15 @@ export class UserService {
 
   /**
    * 모든 사용자 조회
+   * @param offset 페이지 오프셋 (기본값: 0)
+   * @param limit 페이지당 개수 (기본값: 20)
    * @returns 사용자 목록 (비밀번호 제외)
    */
-  async findAllUsers(): Promise<Omit<User, 'password'>[]> {
+  async findAllUsers(offset: number = 0, limit: number = 20): Promise<Omit<User, 'password'>[]> {
     const users = await this.userRepository.find({
       order: { created_at: 'DESC' },
+      skip: offset,
+      take: limit,
     });
 
     return users.map(({ password, ...userWithoutPassword }) => userWithoutPassword);

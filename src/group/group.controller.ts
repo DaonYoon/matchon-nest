@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Patch, Delete, Body, Param, Res, HttpStatus, ParseIntPipe } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
+import { Controller, Get, Post, Patch, Delete, Body, Param, Res, HttpStatus, ParseIntPipe, Query } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { Response } from 'express';
 import { GroupService } from './group.service';
 import { CreateGroupDto } from './dto/create-group.dto';
@@ -33,9 +33,17 @@ export class GroupController {
    * 전체 그룹 목록 조회
    */
   @Get()
-  async findAll(@Res() res: Response): Promise<void> {
+  @ApiQuery({ name: 'offset', required: false, type: Number, description: '페이지 오프셋 (기본값: 0)', example: 0 })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: '페이지당 개수 (기본값: 20)', example: 20 })
+  async findAll(
+    @Res() res: Response,
+    @Query('offset') offset?: string,
+    @Query('limit') limit?: string
+  ): Promise<void> {
     try {
-      const groups = await this.groupService.findAll();
+      const offsetNum = offset ? parseInt(offset, 10) : 0;
+      const limitNum = limit ? parseInt(limit, 10) : 20;
+      const groups = await this.groupService.findAll(offsetNum, limitNum);
       sendSuccess(res, '그룹 목록을 조회했습니다.', { groups });
     } catch (error) {
       const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;

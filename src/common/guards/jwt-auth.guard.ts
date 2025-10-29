@@ -43,6 +43,7 @@ export class JwtAuthGuard implements CanActivate {
 
       // 토큰 타입 확인
       if (payload.type !== "access") {
+        this.clearTokens(response);
         throw new UnauthorizedException("유효하지 않은 토큰입니다.");
       }
 
@@ -50,6 +51,11 @@ export class JwtAuthGuard implements CanActivate {
       (request as any).user = payload;
       return true;
     } catch (error) {
+      // 이미 UnauthorizedException인 경우 그대로 던짐
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
+      
       // access_token이 만료되었으면 refresh_token으로 갱신 시도
       if (
         error.name === "TokenExpiredError" ||
@@ -58,6 +64,8 @@ export class JwtAuthGuard implements CanActivate {
         return await this.handleTokenRefresh(request, response, refreshToken);
       }
 
+      // 기타 에러인 경우 쿠키 삭제 후 예외 발생
+      this.clearTokens(response);
       throw new UnauthorizedException("유효하지 않은 토큰입니다.");
     }
   }
@@ -75,6 +83,7 @@ export class JwtAuthGuard implements CanActivate {
     refreshToken: string | null
   ): Promise<boolean> {
     if (!refreshToken) {
+      // 쿠키 삭제 후 예외 발생
       this.clearTokens(response);
       throw new UnauthorizedException("인증 토큰이 없습니다.");
     }
@@ -129,9 +138,14 @@ export class JwtAuthGuard implements CanActivate {
     } catch (error) {
       // refresh_token이 만료되었거나 유효하지 않으면 쿠키 삭제
       this.clearTokens(response);
-      throw new UnauthorizedException(
-        "인증이 만료되었습니다. 다시 로그인해주세요."
-      );
+      
+      // 이미 UnauthorizedException인 경우 그대로 던짐
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
+      
+      // 다른 에러인 경우 새로운 예외 던지기
+      throw new UnauthorizedException("인증이 만료되었습니다. 다시 로그인해주세요.");
     }
   }
 
@@ -181,7 +195,15 @@ export class JwtAuthGuard implements CanActivate {
    * @param response HTTP 응답 객체
    */
   private clearTokens(response: Response): void {
-    response.clearCookie("access_token", { path: "/" });
-    response.clearCookie("refresh_token", { path: "/" });
+    // 쿠키 삭제 옵션 설정 (설정된 옵션과 동일하게 설정해야 완전히 삭제됨)
+    const cookieOptions = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict" as const,
+      path: "/",
+    };
+    
+    response.clearCookie("access_token", cookieOptions);
+    response.clearCookie("refresh_token", cookieOptions);
   }
 }

@@ -1,7 +1,8 @@
-import { Controller, Post, Body, Res, HttpStatus, UseGuards, Req } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
+import { Controller, Post, Get, Body, Res, HttpStatus, UseGuards, Req } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { Response, Request } from 'express';
-import { AuthService, LoginDto } from './auth.service';
+import { AuthService } from './auth.service';
+import { LoginDto } from './dto/login.dto';
 import { JoinDto } from './dto/join.dto';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { sendSuccess, sendError } from '@/common/utils/response.util';
@@ -37,10 +38,10 @@ export class AuthController {
    * @param res HTTP 응답 객체
    */
   @Post('login')
-  @ApiOperation({ summary: '로그인', description: '사용자 이름과 비밀번호로 로그인하여 JWT 토큰을 받습니다.' })
+  @ApiOperation({ summary: '로그인', description: '이메일과 비밀번호로 로그인하여 JWT 토큰을 받습니다.' })
   @ApiBody({ type: LoginDto })
   @ApiResponse({ status: 200, description: '로그인 성공 (쿠키에 토큰 저장)' })
-  @ApiResponse({ status: 401, description: '로그인 실패 (잘못된 사용자명 또는 비밀번호)' })
+  @ApiResponse({ status: 401, description: '로그인 실패 (잘못된 이메일 또는 비밀번호)' })
   async login(@Body() loginDto: LoginDto, @Res() res: Response): Promise<void> {
     try {
       const { user, tokens } = await this.authService.login(loginDto);
@@ -135,11 +136,20 @@ export class AuthController {
    * @param req HTTP 요청 객체
    * @param res HTTP 응답 객체
    */
-  @Post('me')
+  @Get('me')
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: '현재 사용자 정보 조회', description: 'JWT 토큰을 기반으로 현재 로그인한 사용자의 정보를 조회합니다.' })
+  @ApiBearerAuth('JWT-auth')
+  @ApiResponse({ status: 200, description: '사용자 정보 조회 성공' })
+  @ApiResponse({ status: 401, description: '인증 실패' })
+  @ApiResponse({ status: 404, description: '사용자를 찾을 수 없음' })
   async getCurrentUser(@Req() req: Request, @Res() res: Response): Promise<void> {
     try {
-      const user = (req as any).user;
+      const tokenPayload = (req as any).user;
+      const userId = tokenPayload.sub;
+
+      // DB에서 최신 사용자 정보 조회
+      const user = await this.authService.getCurrentUser(userId);
       sendSuccess(res, '사용자 정보를 조회했습니다.', { user });
     } catch (error) {
       const status = error.status || HttpStatus.UNAUTHORIZED;

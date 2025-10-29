@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Patch, Delete, Body, Param, Res, HttpStatus, ParseIntPipe, Query } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiQuery } from '@nestjs/swagger';
 import { Response } from 'express';
 import { CompetitionService } from './competition.service';
 import { CreateCompetitionDto } from './dto/create-competition.dto';
@@ -77,6 +77,8 @@ export class CompetitionController {
    */
   @Get()
   @ApiOperation({ summary: '전체 대회 목록 조회', description: '등록된 모든 대회 목록을 조회합니다.' })
+  @ApiQuery({ name: 'offset', required: false, type: Number, description: '페이지 오프셋 (기본값: 0)', example: 0 })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: '페이지당 개수 (기본값: 20)', example: 20 })
   @ApiResponse({ 
     status: 200, 
     description: '대회 목록 조회 성공',
@@ -108,9 +110,15 @@ export class CompetitionController {
       }
     }
   })
-  async findAll(@Res() res: Response): Promise<void> {
+  async findAll(
+    @Res() res: Response,
+    @Query('offset') offset?: string,
+    @Query('limit') limit?: string
+  ): Promise<void> {
     try {
-      const competitions = await this.competitionService.findAll();
+      const offsetNum = offset ? parseInt(offset, 10) : 0;
+      const limitNum = limit ? parseInt(limit, 10) : 20;
+      const competitions = await this.competitionService.findAll(offsetNum, limitNum);
       sendSuccess(res, '대회 목록을 조회했습니다.', { competitions });
     } catch (error) {
       const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;

@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Patch, Delete, Body, Param, Res, HttpStatus, ParseIntPipe, Query } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiQuery } from '@nestjs/swagger';
 import { Response } from 'express';
 import { PlayerService } from './player.service';
 import { CreatePlayerDto } from './dto/create-player.dto';
@@ -85,10 +85,18 @@ export class PlayerController {
    */
   @Get()
   @ApiOperation({ summary: '전체 선수 목록 조회', description: '신청된 모든 선수 목록을 조회합니다.' })
+  @ApiQuery({ name: 'offset', required: false, type: Number, description: '페이지 오프셋 (기본값: 0)', example: 0 })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: '페이지당 개수 (기본값: 20)', example: 20 })
   @ApiResponse({ status: 200, description: '선수 목록 조회 성공' })
-  async findAll(@Res() res: Response): Promise<void> {
+  async findAll(
+    @Res() res: Response,
+    @Query('offset') offset?: string,
+    @Query('limit') limit?: string
+  ): Promise<void> {
     try {
-      const players = await this.playerService.findAll();
+      const offsetNum = offset ? parseInt(offset, 10) : 0;
+      const limitNum = limit ? parseInt(limit, 10) : 20;
+      const players = await this.playerService.findAll(offsetNum, limitNum);
       sendSuccess(res, '선수 목록을 조회했습니다.', { players });
     } catch (error) {
       const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;

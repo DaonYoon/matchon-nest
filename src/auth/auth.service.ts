@@ -6,14 +6,7 @@ import * as bcrypt from 'bcryptjs';
 import { User } from '@/user/entities/user.entity';
 import { jwtConfig, refreshTokenConfig } from '@/config/jwt.config';
 import { JoinDto } from './dto/join.dto';
-
-/**
- * 로그인 요청 DTO
- */
-export class LoginDto {
-  email: string;
-  password: string;
-}
+import { LoginDto } from './dto/login.dto';
 
 /**
  * 토큰 페이로드 인터페이스
@@ -206,5 +199,24 @@ export class AuthService {
     } catch (error) {
       throw new UnauthorizedException('유효하지 않은 토큰입니다.');
     }
+  }
+
+  /**
+   * 현재 사용자 정보 조회
+   * @param userId 사용자 고유번호
+   * @returns 사용자 정보 (비밀번호 제외)
+   */
+  async getCurrentUser(userId: number): Promise<Omit<User, 'password'>> {
+    const user = await this.userRepository.findOne({
+      where: { idx: userId },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('사용자를 찾을 수 없습니다.');
+    }
+
+    // 비밀번호 제외하고 반환
+    const { password, ...userWithoutPassword } = user;
+    return userWithoutPassword;
   }
 }

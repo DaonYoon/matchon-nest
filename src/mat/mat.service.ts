@@ -48,12 +48,16 @@ export class MatService {
 
   /**
    * 전체 매트 목록 조회
+   * @param offset 페이지 오프셋 (기본값: 0)
+   * @param limit 페이지당 개수 (기본값: 20)
    */
-  async findAll(): Promise<Mat[]> {
+  async findAll(offset: number = 0, limit: number = 20): Promise<Mat[]> {
     try {
       return await this.matRepository.find({
         relations: ['competition'],
         order: { created_at: 'DESC' },
+        skip: offset,
+        take: limit,
       });
     } catch (error) {
       throw new BadRequestException('매트 목록 조회에 실패했습니다.');
