@@ -73,7 +73,7 @@ export class PlayerController {
   async create(@Body() createDto: CreatePlayerDto, @Res() res: Response): Promise<void> {
     try {
       const player = await this.playerService.create(createDto);
-      sendSuccess(res, '선수가 성공적으로 신청되었습니다.', { player }, HttpStatus.CREATED);
+      sendSuccess(res, '선수가 성공적으로 신청되었습니다.', { data: { player } }, HttpStatus.CREATED);
     } catch (error) {
       const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
       sendError(res, error.message || '선수 신청 중 오류가 발생했습니다.', status);
@@ -97,7 +97,7 @@ export class PlayerController {
       const offsetNum = offset ? parseInt(offset, 10) : 0;
       const limitNum = limit ? parseInt(limit, 10) : 20;
       const players = await this.playerService.findAll(offsetNum, limitNum);
-      sendSuccess(res, '선수 목록을 조회했습니다.', { players });
+      sendSuccess(res, '선수 목록을 조회했습니다.', { data: { players } });
     } catch (error) {
       const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
       sendError(res, error.message || '선수 목록 조회 중 오류가 발생했습니다.', status);
@@ -114,7 +114,7 @@ export class PlayerController {
   async findByCompetition(@Param('competitionIdx', ParseIntPipe) competitionIdx: number, @Res() res: Response): Promise<void> {
     try {
       const players = await this.playerService.findByCompetition(competitionIdx);
-      sendSuccess(res, '선수 목록을 조회했습니다.', { players });
+      sendSuccess(res, '선수 목록을 조회했습니다.', { data: { players } });
     } catch (error) {
       const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
       sendError(res, error.message || '선수 목록 조회 중 오류가 발생했습니다.', status);
@@ -128,7 +128,7 @@ export class PlayerController {
   async findByGroup(@Param('groupIdx', ParseIntPipe) groupIdx: number, @Res() res: Response): Promise<void> {
     try {
       const players = await this.playerService.findByGroup(groupIdx);
-      sendSuccess(res, '선수 목록을 조회했습니다.', { players });
+      sendSuccess(res, '선수 목록을 조회했습니다.', { data: { players } });
     } catch (error) {
       const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
       sendError(res, error.message || '선수 목록 조회 중 오류가 발생했습니다.', status);
@@ -160,7 +160,7 @@ export class PlayerController {
   async findOne(@Param('idx', ParseIntPipe) idx: number, @Res() res: Response): Promise<void> {
     try {
       const player = await this.playerService.findOne(idx);
-      sendSuccess(res, '선수 정보를 조회했습니다.', { player });
+      sendSuccess(res, '선수 정보를 조회했습니다.', { data: { player } });
     } catch (error) {
       const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
       sendError(res, error.message || '선수 정보 조회 중 오류가 발생했습니다.', status);
@@ -178,7 +178,7 @@ export class PlayerController {
   ): Promise<void> {
     try {
       const player = await this.playerService.update(idx, updateDto);
-      sendSuccess(res, '선수 정보가 수정되었습니다.', { player });
+      sendSuccess(res, '선수 정보가 수정되었습니다.', { data: { player } });
     } catch (error) {
       const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
       sendError(res, error.message || '선수 정보 수정 중 오류가 발생했습니다.', status);

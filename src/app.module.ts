@@ -9,6 +9,7 @@ import { CompetitionModule } from '@/competition/competition.module';
 import { MatModule } from '@/mat/mat.module';
 import { GroupModule } from '@/group/group.module';
 import { PlayerModule } from '@/player/player.module';
+import { MatchModule } from '@/match/match.module';
 import { LoggingMiddleware } from '@/common/middleware/logging.middleware';
 
 /**
@@ -37,6 +38,7 @@ import { LoggingMiddleware } from '@/common/middleware/logging.middleware';
     MatModule,
     GroupModule,
     PlayerModule,
+    MatchModule,
   ],
   controllers: [],
   providers: [],

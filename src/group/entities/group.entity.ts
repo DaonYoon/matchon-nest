@@ -1,9 +1,10 @@
 import { Entity, Column, Index, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
 import { BaseEntity } from '@/common/entities/base.entity';
-import { IsNotEmpty, IsString, IsOptional, IsArray } from 'class-validator';
+import { IsNotEmpty, IsString, IsOptional } from 'class-validator';
 import { Competition } from '@/competition/entities/competition.entity';
 import { Mat } from '@/mat/entities/mat.entity';
 import { Player } from '@/player/entities/player.entity';
+import { Match } from '@/match/entities/match.entity';
 
 /**
  * 그룹 정보를 저장하는 엔티티
@@ -26,15 +27,6 @@ export class Group extends BaseEntity {
   @IsNotEmpty({ message: '그룹명은 필수입니다.' })
   @IsString({ message: '그룹명은 문자열이어야 합니다.' })
   name: string;
-
-  @Column({
-    type: 'json',
-    nullable: false,
-    comment: '체급 목록 (JSON 배열)'
-  })
-  @IsNotEmpty({ message: '체급 목록은 필수입니다.' })
-  @IsArray({ message: '체급 목록은 배열이어야 합니다.' })
-  weight_classes: string[];
 
   @Column({
     type: 'int',
@@ -63,5 +55,8 @@ export class Group extends BaseEntity {
 
   @OneToMany(() => Player, (player) => player.group)
   players: Player[];
+
+  @OneToMany(() => Match, (match) => match.group)
+  matches: Match[];
 }
 

@@ -23,9 +23,17 @@ export class CreatePlayerDto {
   @IsNotEmpty({ message: '지원 그룹 idx는 필수입니다.' })
   group_idx: number;
 
-  @ApiProperty({ description: '선택한 체급', example: '-70' })
-  @IsNotEmpty({ message: '체급은 필수입니다.' })
-  @IsString({ message: '체급은 문자열이어야 합니다.' })
-  weight: string;
+  @ApiPropertyOptional({ description: '전화번호', example: '010-1234-5678' })
+  @IsOptional()
+  @IsString({ message: '전화번호는 문자열이어야 합니다.' })
+  phone?: string;
+
+  @ApiPropertyOptional({ description: '입금 여부', example: false, default: false })
+  @IsOptional()
+  is_paid?: boolean;
+
+  @ApiPropertyOptional({ description: '계체 통과 여부', example: false, default: false })
+  @IsOptional()
+  is_weigh_in_passed?: boolean;
 }
 

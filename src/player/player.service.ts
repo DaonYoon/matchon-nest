@@ -50,24 +50,18 @@ export class PlayerService {
         throw new BadRequestException('그룹이 해당 대회에 속하지 않습니다.');
       }
 
-      // 체급이 그룹의 체급 목록에 포함되는지 확인
-      if (!group.weight_classes.includes(createDto.weight)) {
-        throw new BadRequestException('해당 그룹에 존재하지 않는 체급입니다.');
-      }
-
-      // 중복 지원 체크: 같은 이름, 같은 대회, 같은 그룹, 같은 체급이면 중복으로 판단
-      // 주의: 다중 지원은 가능하지만 같은 대회의 같은 그룹의 같은 체급은 불가
+      // 중복 지원 체크: 같은 이름, 같은 대회, 같은 그룹이면 중복으로 판단
+      // 주의: 다중 지원은 가능하지만 같은 대회의 같은 그룹은 불가
       const existingPlayer = await this.playerRepository.findOne({
         where: {
           name: createDto.name,
           competition_idx: createDto.competition_idx,
           group_idx: createDto.group_idx,
-          weight: createDto.weight,
         },
       });
 
       if (existingPlayer) {
-        throw new BadRequestException('같은 대회의 같은 그룹의 같은 체급에는 중복 지원이 불가능합니다.');
+        throw new BadRequestException('같은 대회의 같은 그룹에는 중복 지원이 불가능합니다.');
       }
 
       const player = this.playerRepository.create(createDto);
@@ -202,51 +196,17 @@ export class PlayerService {
           throw new BadRequestException('그룹이 해당 대회에 속하지 않습니다.');
         }
 
-        // 체급 변경이 있는 경우 체급이 그룹의 체급 목록에 포함되는지 확인
-        const weightToCheck = updateDto.weight || player.weight;
-        if (!group.weight_classes.includes(weightToCheck)) {
-          throw new BadRequestException('해당 그룹에 존재하지 않는 체급입니다.');
-        }
-
-        // 중복 지원 체크 (같은 이름, 같은 대회, 같은 그룹, 같은 체급)
+        // 중복 지원 체크 (같은 이름, 같은 대회, 같은 그룹)
         const existingPlayer = await this.playerRepository.findOne({
           where: {
             name: updateDto.name || player.name,
             competition_idx: competitionIdx,
             group_idx: updateDto.group_idx,
-            weight: weightToCheck,
           },
         });
 
         if (existingPlayer && existingPlayer.idx !== idx) {
-          throw new BadRequestException('같은 대회의 같은 그룹의 같은 체급에는 중복 지원이 불가능합니다.');
-        }
-      } else if (updateDto.weight !== undefined) {
-        // 체급만 변경하는 경우
-        const group = await this.groupRepository.findOne({
-          where: { idx: player.group_idx },
-        });
-
-        if (!group) {
-          throw new NotFoundException('그룹 정보를 찾을 수 없습니다.');
-        }
-
-        if (!group.weight_classes.includes(updateDto.weight)) {
-          throw new BadRequestException('해당 그룹에 존재하지 않는 체급입니다.');
-        }
-
-        // 중복 지원 체크
-        const existingPlayer = await this.playerRepository.findOne({
-          where: {
-            name: updateDto.name || player.name,
-            competition_idx: updateDto.competition_idx || player.competition_idx,
-            group_idx: player.group_idx,
-            weight: updateDto.weight,
-          },
-        });
-
-        if (existingPlayer && existingPlayer.idx !== idx) {
-          throw new BadRequestException('같은 대회의 같은 그룹의 같은 체급에는 중복 지원이 불가능합니다.');
+          throw new BadRequestException('같은 대회의 같은 그룹에는 중복 지원이 불가능합니다.');
         }
       }
 

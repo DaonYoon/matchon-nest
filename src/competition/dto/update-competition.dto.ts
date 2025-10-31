@@ -48,5 +48,14 @@ export class UpdateCompetitionDto {
   @IsOptional()
   @IsEnum(CompetitionStatus, { message: '올바른 대회 상태가 아닙니다.' })
   status?: CompetitionStatus;
+
+  @ApiPropertyOptional({ description: '썸네일 이미지 URL', example: 'https://matchons3.s3.ap-northeast-2.amazonaws.com/contest_thumbnail/1/abc123.jpg' })
+  @IsOptional()
+  @IsString({ message: '썸네일은 문자열이어야 합니다.' })
+  thumbnail?: string;
+
+  @ApiPropertyOptional({ description: '참가자 명단 표시 여부', example: true })
+  @IsOptional()
+  is_show_player?: boolean;
 }
 

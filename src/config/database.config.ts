@@ -5,6 +5,7 @@ import { Competition } from '@/competition/entities/competition.entity';
 import { Mat } from '@/mat/entities/mat.entity';
 import { Group } from '@/group/entities/group.entity';
 import { Player } from '@/player/entities/player.entity';
+import { Match } from '@/match/entities/match.entity';
 
 /**
  * TypeORM 데이터베이스 설정
@@ -17,7 +18,7 @@ export const createDatabaseConfig = (configService: ConfigService): TypeOrmModul
   username: configService.get('DB_USERNAME', 'root'),
   password: configService.get('DB_PASSWORD', ''),
   database: configService.get('DB_DATABASE', 'myplace_db'),
-  entities: [User, Competition, Mat, Group, Player],
+  entities: [User, Competition, Mat, Group, Player, Match],
   synchronize: configService.get('NODE_ENV') !== 'production',
   logging: false, // DB 쿼리 로그 비활성화
   timezone: '+09:00',

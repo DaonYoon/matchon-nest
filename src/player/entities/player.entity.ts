@@ -54,13 +54,29 @@ export class Player extends BaseEntity {
 
   @Column({
     type: 'varchar',
-    length: 50,
-    nullable: false,
-    comment: '선택한 체급 (예: "-70", "-76", "무제한")'
+    length: 20,
+    nullable: true,
+    comment: '전화번호'
   })
-  @IsNotEmpty({ message: '체급은 필수입니다.' })
-  @IsString({ message: '체급은 문자열이어야 합니다.' })
-  weight: string;
+  @IsOptional()
+  @IsString({ message: '전화번호는 문자열이어야 합니다.' })
+  phone: string | null;
+
+  @Column({
+    type: 'boolean',
+    nullable: false,
+    default: false,
+    comment: '입금 여부'
+  })
+  is_paid: boolean;
+
+  @Column({
+    type: 'boolean',
+    nullable: false,
+    default: false,
+    comment: '계체 통과 여부'
+  })
+  is_weigh_in_passed: boolean;
 
   // 관계 설정
   @ManyToOne(() => Group, (group) => group.players, { onDelete: 'CASCADE' })

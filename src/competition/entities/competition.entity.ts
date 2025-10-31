@@ -117,6 +117,24 @@ export class Competition extends BaseEntity {
   @IsEnum(CompetitionStatus, { message: '올바른 대회 상태가 아닙니다.' })
   status: CompetitionStatus;
 
+  @Column({
+    type: 'varchar',
+    length: 500,
+    nullable: true,
+    comment: '썸네일 이미지 URL'
+  })
+  @IsOptional()
+  @IsString({ message: '썸네일은 문자열이어야 합니다.' })
+  thumbnail: string | null;
+
+  @Column({
+    type: 'boolean',
+    nullable: false,
+    default: true,
+    comment: '참가자 명단 표시 여부'
+  })
+  is_show_player: boolean;
+
   // 관계 설정
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'master_idx', referencedColumnName: 'idx' })

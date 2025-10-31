@@ -22,7 +22,7 @@ export class GroupController {
   async create(@Body() createDto: CreateGroupDto, @Res() res: Response): Promise<void> {
     try {
       const group = await this.groupService.create(createDto);
-      sendSuccess(res, '그룹이 성공적으로 생성되었습니다.', { group }, HttpStatus.CREATED);
+      sendSuccess(res, '그룹이 성공적으로 생성되었습니다.', { data: { group } }, HttpStatus.CREATED);
     } catch (error) {
       const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
       sendError(res, error.message || '그룹 생성 중 오류가 발생했습니다.', status);
@@ -44,7 +44,7 @@ export class GroupController {
       const offsetNum = offset ? parseInt(offset, 10) : 0;
       const limitNum = limit ? parseInt(limit, 10) : 20;
       const groups = await this.groupService.findAll(offsetNum, limitNum);
-      sendSuccess(res, '그룹 목록을 조회했습니다.', { groups });
+      sendSuccess(res, '그룹 목록을 조회했습니다.', { data: { groups } });
     } catch (error) {
       const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
       sendError(res, error.message || '그룹 목록 조회 중 오류가 발생했습니다.', status);
@@ -58,7 +58,7 @@ export class GroupController {
   async findByCompetition(@Param('competitionIdx', ParseIntPipe) competitionIdx: number, @Res() res: Response): Promise<void> {
     try {
       const groups = await this.groupService.findByCompetition(competitionIdx);
-      sendSuccess(res, '그룹 목록을 조회했습니다.', { groups });
+      sendSuccess(res, '그룹 목록을 조회했습니다.', { data: { groups } });
     } catch (error) {
       const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
       sendError(res, error.message || '그룹 목록 조회 중 오류가 발생했습니다.', status);
@@ -72,7 +72,7 @@ export class GroupController {
   async findByMat(@Param('matIdx', ParseIntPipe) matIdx: number, @Res() res: Response): Promise<void> {
     try {
       const groups = await this.groupService.findByMat(matIdx);
-      sendSuccess(res, '그룹 목록을 조회했습니다.', { groups });
+      sendSuccess(res, '그룹 목록을 조회했습니다.', { data: { groups } });
     } catch (error) {
       const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
       sendError(res, error.message || '그룹 목록 조회 중 오류가 발생했습니다.', status);
@@ -86,7 +86,7 @@ export class GroupController {
   async findOne(@Param('idx', ParseIntPipe) idx: number, @Res() res: Response): Promise<void> {
     try {
       const group = await this.groupService.findOne(idx);
-      sendSuccess(res, '그룹 정보를 조회했습니다.', { group });
+      sendSuccess(res, '그룹 정보를 조회했습니다.', { data: { group } });
     } catch (error) {
       const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
       sendError(res, error.message || '그룹 정보 조회 중 오류가 발생했습니다.', status);
@@ -104,7 +104,7 @@ export class GroupController {
   ): Promise<void> {
     try {
       const group = await this.groupService.update(idx, updateDto);
-      sendSuccess(res, '그룹 정보가 수정되었습니다.', { group });
+      sendSuccess(res, '그룹 정보가 수정되었습니다.', { data: { group } });
     } catch (error) {
       const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
       sendError(res, error.message || '그룹 정보 수정 중 오류가 발생했습니다.', status);

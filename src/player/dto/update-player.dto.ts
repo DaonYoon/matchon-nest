@@ -19,7 +19,13 @@ export class UpdatePlayerDto {
   group_idx?: number;
 
   @IsOptional()
-  @IsString({ message: '체급은 문자열이어야 합니다.' })
-  weight?: string;
+  @IsString({ message: '전화번호는 문자열이어야 합니다.' })
+  phone?: string;
+
+  @IsOptional()
+  is_paid?: boolean;
+
+  @IsOptional()
+  is_weigh_in_passed?: boolean;
 }
 
