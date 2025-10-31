@@ -22,7 +22,7 @@ export class MatController {
   async create(@Body() createDto: CreateMatDto, @Res() res: Response): Promise<void> {
     try {
       const mat = await this.matService.create(createDto);
-      sendSuccess(res, '매트가 성공적으로 생성되었습니다.', { data: { mat } }, HttpStatus.CREATED);
+      sendSuccess(res, '매트가 성공적으로 생성되었습니다.', { mat }, HttpStatus.CREATED);
     } catch (error) {
       const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
       sendError(res, error.message || '매트 생성 중 오류가 발생했습니다.', status);
@@ -44,7 +44,7 @@ export class MatController {
       const offsetNum = offset ? parseInt(offset, 10) : 0;
       const limitNum = limit ? parseInt(limit, 10) : 20;
       const mats = await this.matService.findAll(offsetNum, limitNum);
-      sendSuccess(res, '매트 목록을 조회했습니다.', { data: { mats } });
+      sendSuccess(res, '매트 목록을 조회했습니다.', { mats });
     } catch (error) {
       const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
       sendError(res, error.message || '매트 목록 조회 중 오류가 발생했습니다.', status);
@@ -58,7 +58,7 @@ export class MatController {
   async findByCompetition(@Param('competitionIdx', ParseIntPipe) competitionIdx: number, @Res() res: Response): Promise<void> {
     try {
       const mats = await this.matService.findByCompetition(competitionIdx);
-      sendSuccess(res, '매트 목록을 조회했습니다.', { data: { mats } });
+      sendSuccess(res, '매트 목록을 조회했습니다.', { mats });
     } catch (error) {
       const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
       sendError(res, error.message || '매트 목록 조회 중 오류가 발생했습니다.', status);
@@ -72,7 +72,7 @@ export class MatController {
   async findOne(@Param('idx', ParseIntPipe) idx: number, @Res() res: Response): Promise<void> {
     try {
       const mat = await this.matService.findOne(idx);
-      sendSuccess(res, '매트 정보를 조회했습니다.', { data: mat });
+      sendSuccess(res, '매트 정보를 조회했습니다.', mat);
     } catch (error) {
       const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
       sendError(res, error.message || '매트 정보 조회 중 오류가 발생했습니다.', status);
@@ -93,7 +93,7 @@ export class MatController {
   async findMatchesByMat(@Param('idx', ParseIntPipe) idx: number, @Res() res: Response): Promise<void> {
     try {
       const matches = await this.matService.findMatchesByMat(idx);
-      sendSuccess(res, '경기 목록을 조회했습니다.', { data: matches });
+      sendSuccess(res, '경기 목록을 조회했습니다.', matches);
     } catch (error: any) {
       const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
       sendError(res, error.message || '경기 목록 조회 중 오류가 발생했습니다.', status);
@@ -111,7 +111,7 @@ export class MatController {
   ): Promise<void> {
     try {
       const mat = await this.matService.update(idx, updateDto);
-      sendSuccess(res, '매트 정보가 수정되었습니다.', { data: { mat } });
+      sendSuccess(res, '매트 정보가 수정되었습니다.', { mat });
     } catch (error) {
       const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
       sendError(res, error.message || '매트 정보 수정 중 오류가 발생했습니다.', status);

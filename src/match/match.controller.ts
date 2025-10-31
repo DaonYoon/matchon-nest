@@ -40,7 +40,7 @@ export class MatchController {
   ): Promise<void> {
     try {
       const matches = await this.matchService.createBracket(createDto);
-      sendSuccess(res, '대진표가 생성되었습니다.', { data: matches }, HttpStatus.CREATED);
+      sendSuccess(res, '대진표가 생성되었습니다.', matches, HttpStatus.CREATED);
     } catch (error: any) {
       const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
       sendError(
@@ -72,7 +72,7 @@ export class MatchController {
   ): Promise<void> {
     try {
       const matches = await this.matchService.findBracketByGroup(groupIdx);
-      sendSuccess(res, '대진표를 조회했습니다.', { data: matches });
+      sendSuccess(res, '대진표를 조회했습니다.', matches);
     } catch (error: any) {
       const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
       sendError(
@@ -107,7 +107,7 @@ export class MatchController {
   ): Promise<void> {
     try {
       const match = await this.matchService.updateMatchResult(matchIdx, updateDto);
-      sendSuccess(res, '경기 결과가 입력되었습니다.', { data: match });
+      sendSuccess(res, '경기 결과가 입력되었습니다.', match);
     } catch (error: any) {
       const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
       sendError(
@@ -142,7 +142,7 @@ export class MatchController {
   ): Promise<void> {
     try {
       const match = await this.matchService.updateOrder(matchIdx, updateDto);
-      sendSuccess(res, '경기 순서가 수정되었습니다.', { data: match });
+      sendSuccess(res, '경기 순서가 수정되었습니다.', match);
     } catch (error: any) {
       const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
       sendError(

@@ -99,7 +99,7 @@ export class CompetitionController {
       createDto.master_idx = tokenPayload.sub;
 
       const competition = await this.competitionService.create(createDto, thumbnail);
-      sendSuccess(res!, '대회가 성공적으로 생성되었습니다.', { data: { competition } }, HttpStatus.CREATED);
+      sendSuccess(res!, '대회가 성공적으로 생성되었습니다.', { competition }, HttpStatus.CREATED);
     } catch (error: any) {
       const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
       sendError(res!, error.message || '대회 생성 중 오류가 발생했습니다.', status);
@@ -129,7 +129,7 @@ export class CompetitionController {
       const offsetNum = offset ? parseInt(offset, 10) : 0;
       const limitNum = limit ? parseInt(limit, 10) : 20;
       const competitions = await this.competitionService.findAll(userId, offsetNum, limitNum);
-      sendSuccess(res, '대회 목록을 조회했습니다.', { data: { competitions } });
+      sendSuccess(res, '대회 목록을 조회했습니다.', { competitions });
     } catch (error: any) {
       const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
       sendError(res, error.message || '대회 목록 조회 중 오류가 발생했습니다.', status);
@@ -153,7 +153,7 @@ export class CompetitionController {
       const userId = tokenPayload.sub;
 
       const competitions = await this.competitionService.findByMaster(masterIdx, userId);
-      sendSuccess(res, '대회 목록을 조회했습니다.', { data: { competitions } });
+      sendSuccess(res, '대회 목록을 조회했습니다.', { competitions });
     } catch (error: any) {
       const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
       sendError(res, error.message || '대회 목록 조회 중 오류가 발생했습니다.', status);
@@ -180,7 +180,7 @@ export class CompetitionController {
       const tokenPayload = (req as any).user;
       const userId = tokenPayload.sub;
       const competition = await this.competitionService.findOne(idx, userId);
-      sendSuccess(res, '대회 정보를 조회했습니다.', { data: { competition } });
+      sendSuccess(res, '대회 정보를 조회했습니다.', { competition });
     } catch (error: any) {
       const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
       sendError(res, error.message || '대회 정보 조회 중 오류가 발생했습니다.', status);
@@ -201,7 +201,7 @@ export class CompetitionController {
   ): Promise<void> {
     try {
       const competition = await this.competitionService.findOneByPublic(idx);
-      sendSuccess(res, '대회 정보를 조회했습니다.', { data: { competition } });
+      sendSuccess(res, '대회 정보를 조회했습니다.', { competition });
     } catch (error: any) {
       const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
       sendError(res, error.message || '대회 정보 조회 중 오류가 발생했습니다.', status);
@@ -237,7 +237,7 @@ export class CompetitionController {
       const userId = tokenPayload.sub;
 
       const mats = await this.competitionService.findMatsWithMatchCount(competitionIdx, userId);
-      sendSuccess(res, '매트 목록을 조회했습니다.', { data: mats });
+      sendSuccess(res, '매트 목록을 조회했습니다.', mats);
     } catch (error: any) {
       const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
       sendError(
@@ -327,7 +327,7 @@ export class CompetitionController {
       const userId = tokenPayload.sub;
 
       const competition = await this.competitionService.update(idx, updateDto, userId, thumbnail);
-      sendSuccess(res!, '대회 정보가 수정되었습니다.', { data: { competition } });
+      sendSuccess(res!, '대회 정보가 수정되었습니다.', { competition });
     } catch (error: any) {
       const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
       sendError(res!, error.message || '대회 정보 수정 중 오류가 발생했습니다.', status);
