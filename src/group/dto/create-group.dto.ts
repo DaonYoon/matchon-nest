@@ -1,4 +1,5 @@
-import { IsNotEmpty, IsString, IsArray, IsOptional, ArrayNotEmpty } from 'class-validator';
+import { IsNotEmpty, IsString, IsArray, IsOptional, ArrayNotEmpty, IsNumber } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 /**
  * 그룹 생성 DTO
@@ -19,5 +20,10 @@ export class CreateGroupDto {
 
   @IsOptional()
   mat_idx?: number | null;
+
+  @ApiPropertyOptional({ description: '경기 시간 (분 단위, 기본값 4분)', example: 4, default: 4 })
+  @IsOptional()
+  @IsNumber({}, { message: '경기 시간은 숫자여야 합니다.' })
+  match_time?: number;
 }
 

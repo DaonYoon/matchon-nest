@@ -1,6 +1,6 @@
 import { Entity, Column, Index, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
 import { BaseEntity } from '@/common/entities/base.entity';
-import { IsNotEmpty, IsString, IsOptional } from 'class-validator';
+import { IsNotEmpty, IsString, IsOptional, IsNumber } from 'class-validator';
 import { Competition } from '@/competition/entities/competition.entity';
 import { Mat } from '@/mat/entities/mat.entity';
 import { Player } from '@/player/entities/player.entity';
@@ -43,6 +43,16 @@ export class Group extends BaseEntity {
   })
   @IsOptional()
   mat_idx: number | null;
+
+  @Column({
+    type: 'int',
+    nullable: false,
+    default: 4,
+    comment: '경기 시간 (분 단위, 기본값 4분)'
+  })
+  @IsNotEmpty({ message: '경기 시간은 필수입니다.' })
+  @IsNumber({}, { message: '경기 시간은 숫자여야 합니다.' })
+  match_time: number;
 
   // 관계 설정
   @ManyToOne(() => Competition, (competition) => competition.groups, { onDelete: 'CASCADE' })

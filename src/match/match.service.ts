@@ -326,6 +326,11 @@ export class MatchService {
         score_player1: match.score_player1,
         score_player2: match.score_player2,
         order: match.order,
+        result: match.result,
+        advantage_player1: match.advantage_player1,
+        advantage_player2: match.advantage_player2,
+        penalty_player1: match.penalty_player1,
+        penalty_player2: match.penalty_player2,
         // 선수 정보 포함
         player1: match.player1
           ? {
@@ -540,13 +545,14 @@ export class MatchService {
    */
   async updateMatchResult(
     matchIdx: number,
-    updateDto: UpdateMatchResultDto
+    updateDto: UpdateMatchResultDto,
+    gateway?: any
   ): Promise<Match> {
     try {
-      // 경기 존재 확인
+      // 경기 존재 확인 (관계 정보 포함)
       const match = await this.matchRepository.findOne({
         where: { idx: matchIdx },
-        relations: ["player1", "player2", "nextMatch"],
+        relations: ["player1", "player2", "nextMatch", "group"],
       });
 
       if (!match) {
@@ -600,6 +606,11 @@ export class MatchService {
         }
       }
 
+      // WebSocket으로 실시간 업데이트 전송
+      if (gateway && match.group) {
+        await gateway.broadcastMatchUpdate(matchIdx);
+      }
+
       return savedMatch;
     } catch (error) {
       if (
@@ -617,12 +628,14 @@ export class MatchService {
    */
   async updateOrder(
     matchIdx: number,
-    updateDto: UpdateMatchOrderDto
+    updateDto: UpdateMatchOrderDto,
+    gateway?: any
   ): Promise<Match> {
     try {
-      // 경기 존재 확인
+      // 경기 존재 확인 (관계 정보 포함)
       const match = await this.matchRepository.findOne({
         where: { idx: matchIdx },
+        relations: ['group'],
       });
 
       if (!match) {
@@ -634,7 +647,14 @@ export class MatchService {
         match.order = updateDto.order;
       }
 
-      return await this.matchRepository.save(match);
+      const savedMatch = await this.matchRepository.save(match);
+
+      // WebSocket으로 실시간 업데이트 전송
+      if (gateway && match.group) {
+        await gateway.broadcastMatchUpdate(matchIdx);
+      }
+
+      return savedMatch;
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;
@@ -648,12 +668,14 @@ export class MatchService {
    */
   async updateScore(
     matchIdx: number,
-    updateDto: UpdateMatchScoreDto
+    updateDto: UpdateMatchScoreDto,
+    gateway?: any
   ): Promise<Match> {
     try {
-      // 경기 존재 확인
+      // 경기 존재 확인 (관계 정보 포함)
       const match = await this.matchRepository.findOne({
         where: { idx: matchIdx },
+        relations: ['group'],
       });
 
       if (!match) {
@@ -680,7 +702,14 @@ export class MatchService {
         match.penalty_player2 = updateDto.penalty_player2;
       }
 
-      return await this.matchRepository.save(match);
+      const savedMatch = await this.matchRepository.save(match);
+
+      // WebSocket으로 실시간 업데이트 전송
+      if (gateway && match.group) {
+        await gateway.broadcastMatchUpdate(matchIdx);
+      }
+
+      return savedMatch;
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;
@@ -692,11 +721,12 @@ export class MatchService {
   /**
    * 경기 정보 수정 (모든 필드)
    */
-  async update(matchIdx: number, updateDto: UpdateMatchDto): Promise<Match> {
+  async update(matchIdx: number, updateDto: UpdateMatchDto, gateway?: any): Promise<Match> {
     try {
-      // 경기 존재 확인
+      // 경기 존재 확인 (관계 정보 포함)
       const match = await this.matchRepository.findOne({
         where: { idx: matchIdx },
+        relations: ['group'],
       });
 
       if (!match) {
@@ -744,7 +774,14 @@ export class MatchService {
         match.penalty_player2 = updateDto.penalty_player2;
       }
 
-      return await this.matchRepository.save(match);
+      const savedMatch = await this.matchRepository.save(match);
+
+      // WebSocket으로 실시간 업데이트 전송
+      if (gateway && match.group) {
+        await gateway.broadcastMatchUpdate(matchIdx);
+      }
+
+      return savedMatch;
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;

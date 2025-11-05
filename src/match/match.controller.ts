@@ -2,6 +2,7 @@ import { Controller, Get, Post, Patch, Delete, Body, Param, Res, HttpStatus, Par
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { Response, Request } from 'express';
 import { MatchService } from './match.service';
+import { MatchGateway } from './match.gateway';
 import { CreateMatchBracketDto } from './dto/create-match-bracket.dto';
 import { UpdateMatchResultDto } from './dto/update-match-result.dto';
 import { UpdateMatchOrderDto } from './dto/update-match-order.dto';
@@ -18,7 +19,10 @@ import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 @ApiTags('Matches')
 @Controller('matches')
 export class MatchController {
-  constructor(private readonly matchService: MatchService) {}
+  constructor(
+    private readonly matchService: MatchService,
+    private readonly matchGateway: MatchGateway,
+  ) {}
 
   /**
    * 대진표 생성
@@ -176,7 +180,7 @@ export class MatchController {
     @Res() res: Response
   ): Promise<void> {
     try {
-      const match = await this.matchService.updateMatchResult(matchIdx, updateDto);
+      const match = await this.matchService.updateMatchResult(matchIdx, updateDto, this.matchGateway);
       sendSuccess(res, '경기 결과가 입력되었습니다.', match);
     } catch (error: any) {
       const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
@@ -211,7 +215,7 @@ export class MatchController {
     @Res() res: Response
   ): Promise<void> {
     try {
-      const match = await this.matchService.updateOrder(matchIdx, updateDto);
+      const match = await this.matchService.updateOrder(matchIdx, updateDto, this.matchGateway);
       sendSuccess(res, '경기 순서가 수정되었습니다.', match);
     } catch (error: any) {
       const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
@@ -246,7 +250,7 @@ export class MatchController {
     @Res() res: Response
   ): Promise<void> {
     try {
-      const match = await this.matchService.updateScore(matchIdx, updateDto);
+      const match = await this.matchService.updateScore(matchIdx, updateDto, this.matchGateway);
       sendSuccess(res, '경기 점수가 수정되었습니다.', match);
     } catch (error: any) {
       const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
@@ -281,7 +285,7 @@ export class MatchController {
     @Res() res: Response
   ): Promise<void> {
     try {
-      const match = await this.matchService.update(matchIdx, updateDto);
+      const match = await this.matchService.update(matchIdx, updateDto, this.matchGateway);
       sendSuccess(res, '경기 정보가 수정되었습니다.', match);
     } catch (error: any) {
       const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;

@@ -54,6 +54,7 @@ export class GroupService {
       const group = this.groupRepository.create({
         ...createDto,
         mat_idx: createDto.mat_idx || null,
+        match_time: createDto.match_time ?? 4, // 기본값 4분
       });
 
       return await this.groupRepository.save(group);
@@ -159,8 +160,16 @@ export class GroupService {
         }
       }
 
-      // 수정할 데이터 병합
-      Object.assign(group, updateDto);
+      // 수정할 데이터 병합 (전달된 필드만 업데이트)
+      if (updateDto.name !== undefined) {
+        group.name = updateDto.name;
+      }
+      if (updateDto.mat_idx !== undefined) {
+        group.mat_idx = updateDto.mat_idx;
+      }
+      if (updateDto.match_time !== undefined) {
+        group.match_time = updateDto.match_time;
+      }
 
       return await this.groupRepository.save(group);
     } catch (error) {
