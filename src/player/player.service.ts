@@ -93,15 +93,91 @@ export class PlayerService {
   }
 
   /**
-   * 대회별 선수 목록 조회
+   * 대회별 선수 목록 조회 (페이지네이션 + 필터링)
+   * @param competitionIdx 대회 idx
+   * @param page 페이지 번호 (기본값: 1)
+   * @param limit 페이지당 개수 (기본값: 20)
+   * @param filters 필터 조건 (group_idx, weight, team_name, name)
+   * @returns { players: Player[], total: number, page: number, limit: number }
    */
-  async findByCompetition(competitionIdx: number): Promise<Player[]> {
+  async findByCompetition(
+    competitionIdx: number,
+    page: number = 1,
+    limit: number = 20,
+    filters?: {
+      group_idx?: number;
+      weight?: string;
+      team_name?: string;
+      name?: string;
+    }
+  ): Promise<{ players: Player[]; total: number; page: number; limit: number }> {
     try {
-      return await this.playerRepository.find({
-        where: { competition_idx: competitionIdx },
-        relations: ['group'],
-        order: { created_at: 'ASC' },
-      });
+      // QueryBuilder로 total도 계산 (weight 필터 지원을 위해)
+      const countQueryBuilder = this.playerRepository.createQueryBuilder('player')
+        .leftJoin('player.group', 'group')
+        .where('player.competition_idx = :competitionIdx', { competitionIdx });
+
+      // 필터 조건 적용 (count용)
+      if (filters?.group_idx) {
+        countQueryBuilder.andWhere('player.group_idx = :groupIdx', { groupIdx: filters.group_idx });
+      }
+
+      if (filters?.name) {
+        countQueryBuilder.andWhere('player.name LIKE :name', { name: `%${filters.name}%` });
+      }
+
+      if (filters?.team_name) {
+        countQueryBuilder.andWhere('player.team_name LIKE :teamName', { teamName: `%${filters.team_name}%` });
+      }
+
+      // weight 필터는 Group name에 포함된 체급으로 검색
+      if (filters?.weight) {
+        countQueryBuilder.andWhere('group.name LIKE :weight', { weight: `%${filters.weight}%` });
+      }
+
+      // 전체 개수 조회
+      const total = await countQueryBuilder.getCount();
+
+      // 페이지네이션 계산
+      const offset = (page - 1) * limit;
+
+      // 선수 목록 조회 (weight 필터는 Group 관계를 통해 처리)
+      const queryBuilder = this.playerRepository.createQueryBuilder('player')
+        .leftJoinAndSelect('player.group', 'group')
+        .where('player.competition_idx = :competitionIdx', { competitionIdx });
+
+      // 필터 조건 적용
+      if (filters?.group_idx) {
+        queryBuilder.andWhere('player.group_idx = :groupIdx', { groupIdx: filters.group_idx });
+      }
+
+      if (filters?.name) {
+        queryBuilder.andWhere('player.name LIKE :name', { name: `%${filters.name}%` });
+      }
+
+      if (filters?.team_name) {
+        queryBuilder.andWhere('player.team_name LIKE :teamName', { teamName: `%${filters.team_name}%` });
+      }
+
+      // weight 필터는 Group name에 포함된 체급으로 검색
+      if (filters?.weight) {
+        queryBuilder.andWhere('group.name LIKE :weight', { weight: `%${filters.weight}%` });
+      }
+
+      // 정렬 및 페이지네이션
+      queryBuilder
+        .orderBy('player.created_at', 'ASC')
+        .skip(offset)
+        .take(limit);
+
+      const players = await queryBuilder.getMany();
+
+      return {
+        players,
+        total,
+        page,
+        limit,
+      };
     } catch (error) {
       throw new BadRequestException('선수 목록 조회에 실패했습니다.');
     }

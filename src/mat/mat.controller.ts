@@ -10,8 +10,8 @@ import { sendSuccess, sendError } from '@/common/utils/response.util';
  * 매트 컨트롤러
  * 매트 관련 API 엔드포인트 제공
  */
-@ApiTags('Mats')
-@Controller('mats')
+@ApiTags('Mat')
+@Controller('mat')
 export class MatController {
   constructor(private readonly matService: MatService) {}
 

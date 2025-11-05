@@ -10,8 +10,8 @@ import { sendSuccess, sendError } from '@/common/utils/response.util';
  * 선수 컨트롤러
  * 선수 관련 API 엔드포인트 제공
  */
-@ApiTags('Players')
-@Controller('players')
+@ApiTags('Player')
+@Controller('player')
 export class PlayerController {
   constructor(private readonly playerService: PlayerService) {}
 
@@ -97,7 +97,7 @@ export class PlayerController {
       const offsetNum = offset ? parseInt(offset, 10) : 0;
       const limitNum = limit ? parseInt(limit, 10) : 20;
       const players = await this.playerService.findAll(offsetNum, limitNum);
-      sendSuccess(res, '선수 목록을 조회했습니다.', { players });
+      sendSuccess(res, '선수 목록을 조회했습니다.',  players );
     } catch (error) {
       const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
       sendError(res, error.message || '선수 목록 조회 중 오류가 발생했습니다.', status);
@@ -105,19 +105,42 @@ export class PlayerController {
   }
 
   /**
-   * 대회별 선수 목록 조회
+   * 대회별 선수 목록 조회 (페이지네이션 + 필터링)
    */
   @Get('competition/:competitionIdx')
-  @ApiOperation({ summary: '대회별 선수 목록 조회', description: '특정 대회에 신청된 선수 목록을 조회합니다.' })
+  @ApiOperation({ summary: '대회별 선수 목록 조회', description: '특정 대회에 신청된 선수 목록을 조회합니다. 필터링 및 페이지네이션을 지원합니다.' })
   @ApiParam({ name: 'competitionIdx', description: '대회 idx', type: Number, example: 1 })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: '페이지 번호 (기본값: 1)', example: 1 })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: '페이지당 개수 (기본값: 20)', example: 20 })
+  @ApiQuery({ name: 'group_idx', required: false, type: Number, description: '그룹 idx 필터', example: 1 })
+  @ApiQuery({ name: 'weight', required: false, type: String, description: '체급 필터 (Group name에 포함된 체급)', example: '-70' })
+  @ApiQuery({ name: 'team_name', required: false, type: String, description: '소속팀 필터', example: '서울 유도클럽' })
+  @ApiQuery({ name: 'name', required: false, type: String, description: '선수 이름 필터', example: '홍길동' })
   @ApiResponse({ status: 200, description: '선수 목록 조회 성공' })
-  async findByCompetition(@Param('competitionIdx', ParseIntPipe) competitionIdx: number, @Res() res: Response): Promise<void> {
+  async findByCompetition(
+    @Param('competitionIdx', ParseIntPipe) competitionIdx: number,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('group_idx') groupIdx?: string,
+    @Query('weight') weight?: string,
+    @Query('team_name') teamName?: string,
+    @Query('name') name?: string,
+    @Res() res?: Response
+  ): Promise<void> {
     try {
-      const players = await this.playerService.findByCompetition(competitionIdx);
-      sendSuccess(res, '선수 목록을 조회했습니다.', { players });
+      const pageNum = page ? parseInt(page, 10) : 1;
+      const limitNum = limit ? parseInt(limit, 10) : 20;
+      const filters = {
+        group_idx: groupIdx ? parseInt(groupIdx, 10) : undefined,
+        weight: weight,
+        team_name: teamName,
+        name: name,
+      };
+      const result = await this.playerService.findByCompetition(competitionIdx, pageNum, limitNum, filters);
+      sendSuccess(res!, '선수 목록을 조회했습니다.', result);
     } catch (error) {
       const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
-      sendError(res, error.message || '선수 목록 조회 중 오류가 발생했습니다.', status);
+      sendError(res!, error.message || '선수 목록 조회 중 오류가 발생했습니다.', status);
     }
   }
 
@@ -128,7 +151,7 @@ export class PlayerController {
   async findByGroup(@Param('groupIdx', ParseIntPipe) groupIdx: number, @Res() res: Response): Promise<void> {
     try {
       const players = await this.playerService.findByGroup(groupIdx);
-      sendSuccess(res, '선수 목록을 조회했습니다.', { players });
+      sendSuccess(res, '선수 목록을 조회했습니다.',  players );
     } catch (error) {
       const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
       sendError(res, error.message || '선수 목록 조회 중 오류가 발생했습니다.', status);
@@ -142,7 +165,7 @@ export class PlayerController {
   async findByPlayerName(@Param('playerName') playerName: string, @Res() res: Response): Promise<void> {
     try {
       const players = await this.playerService.findByPlayerName(playerName);
-      sendSuccess(res, '선수 지원 내역을 조회했습니다.', { players });
+      sendSuccess(res, '선수 지원 내역을 조회했습니다.',  players );
     } catch (error) {
       const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
       sendError(res, error.message || '선수 지원 내역 조회 중 오류가 발생했습니다.', status);
@@ -160,7 +183,7 @@ export class PlayerController {
   async findOne(@Param('idx', ParseIntPipe) idx: number, @Res() res: Response): Promise<void> {
     try {
       const player = await this.playerService.findOne(idx);
-      sendSuccess(res, '선수 정보를 조회했습니다.', { player });
+      sendSuccess(res, '선수 정보를 조회했습니다.',  player );
     } catch (error) {
       const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
       sendError(res, error.message || '선수 정보 조회 중 오류가 발생했습니다.', status);
@@ -178,7 +201,7 @@ export class PlayerController {
   ): Promise<void> {
     try {
       const player = await this.playerService.update(idx, updateDto);
-      sendSuccess(res, '선수 정보가 수정되었습니다.', { player });
+      sendSuccess(res, '선수 정보가 수정되었습니다.',  player );
     } catch (error) {
       const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
       sendError(res, error.message || '선수 정보 수정 중 오류가 발생했습니다.', status);

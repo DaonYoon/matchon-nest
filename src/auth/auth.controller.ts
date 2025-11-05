@@ -169,7 +169,7 @@ export class AuthController {
 
       // DB에서 최신 사용자 정보 조회
       const user = await this.authService.getCurrentUser(userId);
-      sendSuccess(res, '사용자 정보를 조회했습니다.', { user });
+      sendSuccess(res, '사용자 정보를 조회했습니다.', user);
     } catch (error) {
       const status = error.status || HttpStatus.UNAUTHORIZED;
       sendError(res, error.message || '사용자 정보 조회에 실패했습니다.', status);

@@ -10,8 +10,8 @@ import { sendSuccess, sendError } from '@/common/utils/response.util';
  * 그룹 컨트롤러
  * 그룹 관련 API 엔드포인트 제공
  */
-@ApiTags('Groups')
-@Controller('groups')
+@ApiTags('Group')
+@Controller('group')
 export class GroupController {
   constructor(private readonly groupService: GroupService) {}
 
@@ -58,7 +58,7 @@ export class GroupController {
   async findByCompetition(@Param('competitionIdx', ParseIntPipe) competitionIdx: number, @Res() res: Response): Promise<void> {
     try {
       const groups = await this.groupService.findByCompetition(competitionIdx);
-      sendSuccess(res, '그룹 목록을 조회했습니다.', { groups });
+      sendSuccess(res, '그룹 목록을 조회했습니다.',  groups );
     } catch (error) {
       const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
       sendError(res, error.message || '그룹 목록 조회 중 오류가 발생했습니다.', status);
@@ -72,7 +72,7 @@ export class GroupController {
   async findByMat(@Param('matIdx', ParseIntPipe) matIdx: number, @Res() res: Response): Promise<void> {
     try {
       const groups = await this.groupService.findByMat(matIdx);
-      sendSuccess(res, '그룹 목록을 조회했습니다.', { groups });
+      sendSuccess(res, '그룹 목록을 조회했습니다.',  groups );
     } catch (error) {
       const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
       sendError(res, error.message || '그룹 목록 조회 중 오류가 발생했습니다.', status);
@@ -86,7 +86,7 @@ export class GroupController {
   async findOne(@Param('idx', ParseIntPipe) idx: number, @Res() res: Response): Promise<void> {
     try {
       const group = await this.groupService.findOne(idx);
-      sendSuccess(res, '그룹 정보를 조회했습니다.', { group });
+      sendSuccess(res, '그룹 정보를 조회했습니다.',  group );
     } catch (error) {
       const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
       sendError(res, error.message || '그룹 정보 조회 중 오류가 발생했습니다.', status);
@@ -104,7 +104,7 @@ export class GroupController {
   ): Promise<void> {
     try {
       const group = await this.groupService.update(idx, updateDto);
-      sendSuccess(res, '그룹 정보가 수정되었습니다.', { group });
+      sendSuccess(res, '그룹 정보가 수정되었습니다.',  group );
     } catch (error) {
       const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
       sendError(res, error.message || '그룹 정보 수정 중 오류가 발생했습니다.', status);

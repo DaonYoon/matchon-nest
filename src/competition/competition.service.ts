@@ -81,6 +81,23 @@ export class CompetitionService {
   }
 
   /**
+   * 전체 대회 목록 조회 (공개 - 관계 데이터 제외)
+   * @param offset 페이지 오프셋 (기본값: 0)
+   * @param limit 페이지당 개수 (기본값: 20)
+   */
+  async findAllPublic(offset: number = 0, limit: number = 20): Promise<Competition[]> {
+    try {
+      return await this.competitionRepository.find({
+        order: { created_at: 'DESC' },
+        skip: offset,
+        take: limit,
+      });
+    } catch (error) {
+      throw new BadRequestException('대회 목록 조회에 실패했습니다.');
+    }
+  }
+
+  /**
    * 전체 대회 목록 조회 (토큰 기반 필터링)
    * @param userId 현재 로그인한 사용자 ID
    * @param offset 페이지 오프셋 (기본값: 0)

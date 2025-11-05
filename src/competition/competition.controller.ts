@@ -107,29 +107,25 @@ export class CompetitionController {
   }
 
   /**
-   * 전체 대회 목록 조회 (토큰 기반)
+   * 전체 대회 목록 조회 (공개)
    */
   @Get()
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: '내 대회 목록 조회', description: '현재 로그인한 사용자의 대회 목록을 조회합니다.' })
+  @ApiOperation({ summary: '대회 목록 조회', description: '전체 대회 목록을 공개적으로 조회합니다.' })
   @ApiQuery({ name: 'offset', required: false, type: Number, description: '페이지 오프셋 (기본값: 0)', example: 0 })
   @ApiQuery({ name: 'limit', required: false, type: Number, description: '페이지당 개수 (기본값: 20)', example: 20 })
   @ApiResponse({ status: 200, description: '대회 목록 조회 성공' })
-  @ApiResponse({ status: 401, type: ErrorResponseDto })
   async findAll(
-    @Req() req: Request,
     @Res() res: Response,
     @Query('offset') offset?: string,
     @Query('limit') limit?: string
   ): Promise<void> {
     try {
-      const tokenPayload = (req as any).user;
-      const userId = tokenPayload.sub;
+
+
       const offsetNum = offset ? parseInt(offset, 10) : 0;
       const limitNum = limit ? parseInt(limit, 10) : 20;
-      const competitions = await this.competitionService.findAll(userId, offsetNum, limitNum);
-      sendSuccess(res, '대회 목록을 조회했습니다.', { competitions });
+      const competitions = await this.competitionService.findAllPublic(offsetNum, limitNum);
+      sendSuccess(res, '대회 목록을 조회했습니다.',  competitions );
     } catch (error: any) {
       const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
       sendError(res, error.message || '대회 목록 조회 중 오류가 발생했습니다.', status);
