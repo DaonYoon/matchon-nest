@@ -367,6 +367,7 @@ export class MatchService {
               name: match.group.name,
               competition_idx: match.group.competition_idx,
               mat_idx: match.group.mat_idx,
+              match_time: match.group.match_time, // 경기 시간 (분 단위)
             }
           : null,
       }));
@@ -418,6 +419,19 @@ export class MatchService {
         score_player1: match.score_player1,
         score_player2: match.score_player2,
         order: match.order,
+        result: match.result,
+        advantage_player1: match.advantage_player1,
+        advantage_player2: match.advantage_player2,
+        penalty_player1: match.penalty_player1,
+        penalty_player2: match.penalty_player2,
+        // 그룹 정보 (경기 시간 포함)
+        group: {
+          idx: group.idx,
+          name: group.name,
+          competition_idx: group.competition_idx,
+          mat_idx: group.mat_idx,
+          match_time: group.match_time, // 경기 시간 (분 단위)
+        },
         // 선수 정보 포함
         player1: match.player1
           ? {
@@ -522,6 +536,7 @@ export class MatchService {
               name: match.group.name,
               competition_idx: match.group.competition_idx,
               mat_idx: match.group.mat_idx,
+              match_time: match.group.match_time, // 경기 시간 (분 단위)
             }
           : null,
         nextMatch: match.nextMatch

@@ -531,12 +531,313 @@ function App() {
 }
 ```
 
+## 경기 시간 표시 및 경기 종료 처리
+
+경기 정보에는 그룹의 `match_time` (분 단위)이 포함되어 있습니다. 프론트엔드에서 경기 시간을 표시하고 0초가 되면 "경기종료"를 표시하는 방법입니다.
+
+### 경기 시간 정보
+
+경기 데이터의 `group.match_time` 필드에 경기 시간(분 단위)이 포함되어 있습니다:
+
+```javascript
+socket.on('matches', (data) => {
+  data.matches.forEach(match => {
+    const matchTimeMinutes = match.group?.match_time || 4; // 기본값 4분
+    console.log(`경기 ${match.idx}의 경기 시간: ${matchTimeMinutes}분`);
+  });
+});
+```
+
+### 프론트엔드 타이머 구현 예시
+
+```jsx
+import { useEffect, useState, useRef } from 'react';
+import { io } from 'socket.io-client';
+
+function MatchTimer({ match }) {
+  const [remainingSeconds, setRemainingSeconds] = useState(0);
+  const [isRunning, setIsRunning] = useState(false);
+  const intervalRef = useRef(null);
+  const startTimeRef = useRef(null);
+
+  // 경기 시간 (분 단위)
+  const matchTimeMinutes = match.group?.match_time || 4;
+  const totalSeconds = matchTimeMinutes * 60;
+
+  // 경기 시작 (ACTIVE 상태로 변경 시)
+  useEffect(() => {
+    if (match.status === 'ACTIVE' && !isRunning) {
+      setIsRunning(true);
+      startTimeRef.current = Date.now();
+      setRemainingSeconds(totalSeconds);
+      
+      // 타이머 시작
+      intervalRef.current = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
+        const remaining = Math.max(0, totalSeconds - elapsed);
+        setRemainingSeconds(remaining);
+        
+        // 시간이 0이 되면 타이머 정지
+        if (remaining === 0) {
+          setIsRunning(false);
+          if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+          }
+        }
+      }, 1000);
+    }
+    
+    // 경기가 일시정지되면
+    if (match.status === 'PAUSE' && isRunning) {
+      setIsRunning(false);
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    }
+    
+    // 경기가 종료되면
+    if (match.status === 'END' || match.status === 'COMPLETED') {
+      setIsRunning(false);
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+      setRemainingSeconds(0);
+    }
+    
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, [match.status, matchTimeMinutes, totalSeconds, isRunning]);
+
+  // 시간을 MM:SS 형식으로 변환
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  };
+
+  const isTimeUp = remainingSeconds === 0 && (match.status === 'ACTIVE' || match.status === 'IN_PROGRESS');
+
+  return (
+    <div className="match-timer">
+      <div className="timer-display">
+        {isTimeUp ? (
+          <div className="time-up" style={{
+            fontSize: '2rem',
+            fontWeight: 'bold',
+            color: '#ff0000',
+            textShadow: '2px 2px 4px rgba(0,0,0,0.5)',
+            animation: 'blink 1s infinite',
+          }}>
+            경기종료!
+          </div>
+        ) : (
+          <div className="time-remaining" style={{
+            fontSize: '1.5rem',
+            fontWeight: 'bold',
+            color: remainingSeconds <= 10 ? '#ff0000' : remainingSeconds <= 30 ? '#ff8800' : '#000000',
+          }}>
+            {formatTime(remainingSeconds)}
+          </div>
+        )}
+      </div>
+      <style>{`
+        @keyframes blink {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+function MatchItem({ match }) {
+  return (
+    <div className="match-item">
+      <div className="match-header">
+        <h3>경기 {match.idx}</h3>
+        <MatchTimer match={match} />
+      </div>
+      <div className="match-players">
+        {match.player1?.name || 'TBD'} vs {match.player2?.name || 'TBD'}
+      </div>
+      <div className="match-status">
+        상태: {match.status}
+      </div>
+    </div>
+  );
+}
+```
+
+### JavaScript 타이머 예시
+
+```javascript
+class MatchTimer {
+  constructor(match, onTimeUp) {
+    this.match = match;
+    this.onTimeUp = onTimeUp;
+    this.remainingSeconds = 0;
+    this.intervalId = null;
+    this.startTime = null;
+    this.matchTimeMinutes = match.group?.match_time || 4;
+    this.totalSeconds = this.matchTimeMinutes * 60;
+  }
+
+  start() {
+    if (this.match.status !== 'ACTIVE' && this.match.status !== 'IN_PROGRESS') {
+      return;
+    }
+
+    this.startTime = Date.now();
+    this.remainingSeconds = this.totalSeconds;
+
+    this.intervalId = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - this.startTime) / 1000);
+      this.remainingSeconds = Math.max(0, this.totalSeconds - elapsed);
+
+      if (this.remainingSeconds === 0) {
+        this.stop();
+        if (this.onTimeUp) {
+          this.onTimeUp();
+        }
+      }
+    }, 1000);
+  }
+
+  stop() {
+    if (this.intervalId) {
+      clearInterval(this.intervalId);
+      this.intervalId = null;
+    }
+  }
+
+  pause() {
+    this.stop();
+  }
+
+  getFormattedTime() {
+    const mins = Math.floor(this.remainingSeconds / 60);
+    const secs = this.remainingSeconds % 60;
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  }
+
+  isTimeUp() {
+    return this.remainingSeconds === 0;
+  }
+}
+
+// 사용 예시
+socket.on('matches', (data) => {
+  data.matches.forEach(match => {
+    if (match.status === 'ACTIVE' || match.status === 'IN_PROGRESS') {
+      const timer = new MatchTimer(match, () => {
+        // 시간이 0이 되면 경기종료 표시
+        console.log('경기 시간 종료!');
+        showTimeUpMessage(match);
+      });
+      timer.start();
+
+      // 1초마다 시간 업데이트
+      setInterval(() => {
+        const timeDisplay = document.getElementById(`timer-${match.idx}`);
+        if (timeDisplay) {
+          if (timer.isTimeUp()) {
+            timeDisplay.innerHTML = `
+              <span style="
+                font-size: 2rem;
+                font-weight: bold;
+                color: #ff0000;
+                text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+                animation: blink 1s infinite;
+              ">경기종료!</span>
+            `;
+          } else {
+            timeDisplay.textContent = timer.getFormattedTime();
+          }
+        }
+      }, 1000);
+    }
+  });
+});
+
+function showTimeUpMessage(match) {
+  // 경기종료 메시지 표시
+  const message = document.createElement('div');
+  message.style.cssText = `
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(255, 0, 0, 0.9);
+    color: white;
+    font-size: 3rem;
+    font-weight: bold;
+    padding: 2rem 4rem;
+    border-radius: 10px;
+    z-index: 10000;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    animation: blink 1s infinite;
+  `;
+  message.textContent = '경기종료!';
+  document.body.appendChild(message);
+
+  // 3초 후 제거
+  setTimeout(() => {
+    message.remove();
+  }, 3000);
+}
+```
+
+### CSS 스타일 예시
+
+```css
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.time-up {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #ff0000;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+  animation: blink 1s infinite;
+  background: rgba(255, 0, 0, 0.1);
+  padding: 0.5rem 1rem;
+  border-radius: 5px;
+  border: 2px solid #ff0000;
+}
+
+.time-remaining {
+  font-size: 1.5rem;
+  font-weight: bold;
+  font-family: 'Courier New', monospace;
+}
+
+.time-remaining.warning {
+  color: #ff8800;
+}
+
+.time-remaining.danger {
+  color: #ff0000;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+```
+
 ## 주의사항
 
 1. **인증 불필요**: 현재 WebSocket 서버는 인증 없이 접근 가능합니다.
 2. **CORS 설정**: 모든 origin에서 접근 가능하도록 설정되어 있습니다.
 3. **자동 재연결**: 연결이 끊어지면 자동으로 재연결을 시도합니다.
 4. **실시간 업데이트**: 경기 정보가 수정되면 자동으로 모든 구독자에게 업데이트가 전송됩니다.
+5. **경기 시간**: 각 경기의 그룹에 설정된 `match_time` (분 단위)을 사용하여 타이머를 구현하세요.
 
 ## 서버 설정
 
