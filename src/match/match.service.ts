@@ -9,6 +9,8 @@ import { Match, MatchStatus } from "./entities/match.entity";
 import { CreateMatchBracketDto } from "./dto/create-match-bracket.dto";
 import { UpdateMatchResultDto } from "./dto/update-match-result.dto";
 import { UpdateMatchOrderDto } from "./dto/update-match-order.dto";
+import { UpdateMatchScoreDto } from "./dto/update-match-score.dto";
+import { UpdateMatchDto } from "./dto/update-match.dto";
 import { Group } from "@/group/entities/group.entity";
 import { Player } from "@/player/entities/player.entity";
 import { Mat } from "@/mat/entities/mat.entity";
@@ -450,6 +452,90 @@ export class MatchService {
   }
 
   /**
+   * 특정 경기 조회
+   */
+  async findOne(matchIdx: number): Promise<any> {
+    try {
+      // 경기 조회 (관계 정보 포함)
+      const match = await this.matchRepository.findOne({
+        where: { idx: matchIdx },
+        relations: ["player1", "player2", "winner", "group", "nextMatch"],
+      });
+
+      if (!match) {
+        throw new NotFoundException("경기 정보를 찾을 수 없습니다.");
+      }
+
+      // 선수 정보를 포함한 경기 데이터 반환
+      return {
+        idx: match.idx,
+        created_at: match.created_at,
+        updated_at: match.updated_at,
+        group_idx: match.group_idx,
+        round: match.round,
+        match_number: match.match_number,
+        player1_idx: match.player1_idx,
+        player2_idx: match.player2_idx,
+        winner_idx: match.winner_idx,
+        status: match.status,
+        next_match_idx: match.next_match_idx,
+        score_player1: match.score_player1,
+        score_player2: match.score_player2,
+        order: match.order,
+        result: match.result,
+        advantage_player1: match.advantage_player1,
+        advantage_player2: match.advantage_player2,
+        penalty_player1: match.penalty_player1,
+        penalty_player2: match.penalty_player2,
+        player1: match.player1
+          ? {
+              idx: match.player1.idx,
+              name: match.player1.name,
+              team_name: match.player1.team_name,
+              phone: match.player1.phone,
+            }
+          : null,
+        player2: match.player2
+          ? {
+              idx: match.player2.idx,
+              name: match.player2.name,
+              team_name: match.player2.team_name,
+              phone: match.player2.phone,
+            }
+          : null,
+        winner: match.winner
+          ? {
+              idx: match.winner.idx,
+              name: match.winner.name,
+              team_name: match.winner.team_name,
+              phone: match.winner.phone,
+            }
+          : null,
+        group: match.group
+          ? {
+              idx: match.group.idx,
+              name: match.group.name,
+              competition_idx: match.group.competition_idx,
+              mat_idx: match.group.mat_idx,
+            }
+          : null,
+        nextMatch: match.nextMatch
+          ? {
+              idx: match.nextMatch.idx,
+              round: match.nextMatch.round,
+              match_number: match.nextMatch.match_number,
+            }
+          : null,
+      };
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new BadRequestException("경기 조회에 실패했습니다.");
+    }
+  }
+
+  /**
    * 경기 결과 입력 및 승자 다음 경기로 진출 처리
    */
   async updateMatchResult(
@@ -554,6 +640,116 @@ export class MatchService {
         throw error;
       }
       throw new BadRequestException("경기 순서 수정에 실패했습니다.");
+    }
+  }
+
+  /**
+   * 경기 점수 수정 (점수, 어드밴티지, 패널티만)
+   */
+  async updateScore(
+    matchIdx: number,
+    updateDto: UpdateMatchScoreDto
+  ): Promise<Match> {
+    try {
+      // 경기 존재 확인
+      const match = await this.matchRepository.findOne({
+        where: { idx: matchIdx },
+      });
+
+      if (!match) {
+        throw new NotFoundException("경기 정보를 찾을 수 없습니다.");
+      }
+
+      // 점수 업데이트 (전달된 필드만 업데이트)
+      if (updateDto.score_player1 !== undefined) {
+        match.score_player1 = updateDto.score_player1;
+      }
+      if (updateDto.score_player2 !== undefined) {
+        match.score_player2 = updateDto.score_player2;
+      }
+      if (updateDto.advantage_player1 !== undefined) {
+        match.advantage_player1 = updateDto.advantage_player1;
+      }
+      if (updateDto.advantage_player2 !== undefined) {
+        match.advantage_player2 = updateDto.advantage_player2;
+      }
+      if (updateDto.penalty_player1 !== undefined) {
+        match.penalty_player1 = updateDto.penalty_player1;
+      }
+      if (updateDto.penalty_player2 !== undefined) {
+        match.penalty_player2 = updateDto.penalty_player2;
+      }
+
+      return await this.matchRepository.save(match);
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new BadRequestException("경기 점수 수정에 실패했습니다.");
+    }
+  }
+
+  /**
+   * 경기 정보 수정 (모든 필드)
+   */
+  async update(matchIdx: number, updateDto: UpdateMatchDto): Promise<Match> {
+    try {
+      // 경기 존재 확인
+      const match = await this.matchRepository.findOne({
+        where: { idx: matchIdx },
+      });
+
+      if (!match) {
+        throw new NotFoundException("경기 정보를 찾을 수 없습니다.");
+      }
+
+      // 전달된 필드만 업데이트
+      if (updateDto.player1_idx !== undefined) {
+        match.player1_idx = updateDto.player1_idx;
+      }
+      if (updateDto.player2_idx !== undefined) {
+        match.player2_idx = updateDto.player2_idx;
+      }
+      if (updateDto.winner_idx !== undefined) {
+        match.winner_idx = updateDto.winner_idx;
+      }
+      if (updateDto.status !== undefined) {
+        match.status = updateDto.status;
+      }
+      if (updateDto.next_match_idx !== undefined) {
+        match.next_match_idx = updateDto.next_match_idx;
+      }
+      if (updateDto.score_player1 !== undefined) {
+        match.score_player1 = updateDto.score_player1;
+      }
+      if (updateDto.score_player2 !== undefined) {
+        match.score_player2 = updateDto.score_player2;
+      }
+      if (updateDto.order !== undefined) {
+        match.order = updateDto.order;
+      }
+      if (updateDto.result !== undefined) {
+        match.result = updateDto.result;
+      }
+      if (updateDto.advantage_player1 !== undefined) {
+        match.advantage_player1 = updateDto.advantage_player1;
+      }
+      if (updateDto.advantage_player2 !== undefined) {
+        match.advantage_player2 = updateDto.advantage_player2;
+      }
+      if (updateDto.penalty_player1 !== undefined) {
+        match.penalty_player1 = updateDto.penalty_player1;
+      }
+      if (updateDto.penalty_player2 !== undefined) {
+        match.penalty_player2 = updateDto.penalty_player2;
+      }
+
+      return await this.matchRepository.save(match);
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new BadRequestException("경기 정보 수정에 실패했습니다.");
     }
   }
 

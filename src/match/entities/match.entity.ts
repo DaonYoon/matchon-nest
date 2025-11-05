@@ -8,10 +8,13 @@ import { Player } from '@/player/entities/player.entity';
  * 경기 상태 열거형
  */
 export enum MatchStatus {
-  PENDING = 'pending', // 대기중
-  IN_PROGRESS = 'in_progress', // 진행중
-  COMPLETED = 'completed', // 완료
-  BYE = 'bye', // 부전승
+  PENDING = 'PENDING', // 대기중
+  IN_PROGRESS = 'IN_PROGRESS', // 진행중
+  COMPLETED = 'COMPLETED', // 완료
+  BYE = 'BYE', // 부전승
+  ACTIVE = 'ACTIVE', // 활성
+  PAUSE = 'PAUSE', // 일시정지
+  END = 'END', // 종료
 }
 
 /**
@@ -136,6 +139,51 @@ export class Match extends BaseEntity {
   @IsOptional()
   @IsNumber({}, { message: '경기 순서는 숫자여야 합니다.' })
   order: number | null;
+
+  @Column({
+    type: 'varchar',
+    length: 50,
+    nullable: true,
+    comment: '경기 결과 (텍스트, 최대 50자)'
+  })
+  @IsOptional()
+  result: string | null;
+
+  @Column({
+    type: 'int',
+    nullable: true,
+    comment: '선수1 어드밴티지'
+  })
+  @IsOptional()
+  @IsNumber({}, { message: '선수1 어드밴티지는 숫자여야 합니다.' })
+  advantage_player1: number | null;
+
+  @Column({
+    type: 'int',
+    nullable: true,
+    comment: '선수2 어드밴티지'
+  })
+  @IsOptional()
+  @IsNumber({}, { message: '선수2 어드밴티지는 숫자여야 합니다.' })
+  advantage_player2: number | null;
+
+  @Column({
+    type: 'int',
+    nullable: true,
+    comment: '선수1 패널티'
+  })
+  @IsOptional()
+  @IsNumber({}, { message: '선수1 패널티는 숫자여야 합니다.' })
+  penalty_player1: number | null;
+
+  @Column({
+    type: 'int',
+    nullable: true,
+    comment: '선수2 패널티'
+  })
+  @IsOptional()
+  @IsNumber({}, { message: '선수2 패널티는 숫자여야 합니다.' })
+  penalty_player2: number | null;
 
   // 관계 설정
   @ManyToOne(() => Group, { onDelete: 'CASCADE' })

@@ -5,6 +5,7 @@ import { Response, Request } from 'express';
 import { CompetitionService } from './competition.service';
 import { CreateCompetitionDto } from './dto/create-competition.dto';
 import { UpdateCompetitionDto } from './dto/update-competition.dto';
+import { CheckCodeDto } from './dto/check-code.dto';
 import { sendSuccess, sendError } from '@/common/utils/response.util';
 import { SuccessResponseDto, ErrorResponseDto } from '@/common/dto/common-response.dto';
 import { Competition } from './entities/competition.entity';
@@ -153,6 +154,80 @@ export class CompetitionController {
     } catch (error: any) {
       const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
       sendError(res, error.message || '대회 목록 조회 중 오류가 발생했습니다.', status);
+    }
+  }
+
+  /**
+   * 비밀키 확인
+   */
+  @Post('check-code/:competitionIdx')
+  @ApiOperation({ summary: '비밀키 확인', description: '입력한 코드가 대회의 비밀키와 일치하는지 확인합니다. 일치하면 대회 주최자 토큰을 발급합니다.' })
+  @ApiParam({ name: 'competitionIdx', description: '대회 idx', type: Number, example: 1 })
+  @ApiBody({ type: CheckCodeDto })
+  @ApiResponse({ status: 200, description: '비밀키 확인 성공 (쿠키에 토큰 저장)' })
+  @ApiResponse({ status: 404, type: ErrorResponseDto })
+  async checkCode(
+    @Param('competitionIdx', ParseIntPipe) competitionIdx: number,
+    @Body() checkCodeDto: CheckCodeDto,
+    @Res() res: Response
+  ): Promise<void> {
+    try {
+      const result = await this.competitionService.checkSecretKey(competitionIdx, checkCodeDto.code);
+
+      if (!result.isValid) {
+        sendSuccess(res, '비밀키 확인이 완료되었습니다.', { isValid: false });
+        return;
+      }
+
+      // 비밀키 확인 성공 시 토큰을 쿠키에 설정 (로그인과 동일)
+      const isProduction = process.env.NODE_ENV === 'production';
+      if (result.tokens) {
+        res.cookie('access_token', result.tokens.accessToken, {
+          httpOnly: true,
+          secure: isProduction,
+          sameSite: isProduction ? 'none' : 'lax',
+          maxAge: 60 * 60 * 1000, // 1시간 (밀리초)
+          path: '/',
+        });
+
+        res.cookie('refresh_token', result.tokens.refreshToken, {
+          httpOnly: true,
+          secure: isProduction,
+          sameSite: isProduction ? 'none' : 'lax',
+          maxAge: 7 * 24 * 60 * 60 * 1000, // 7일 (밀리초)
+          path: '/',
+        });
+      }
+
+      // 응답 데이터 (비밀번호 제외)
+      sendSuccess(res, '비밀키 확인에 성공했습니다.', {
+        isValid: true,
+        user: result.user,
+      });
+    } catch (error: any) {
+      const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
+      sendError(res, error.message || '비밀키 확인 중 오류가 발생했습니다.', status);
+    }
+  }
+
+  /**
+   * 특정 대회 조회 (공개 - 그룹, 매트, 선수 제외)
+   */
+  @Get(':idx/public')
+  @ApiOperation({ summary: '대회 공개 조회', description: '특정 대회의 상세 정보를 공개적으로 조회합니다. 그룹, 매트, 선수 정보는 제외됩니다.' })
+  @ApiParam({ name: 'idx', description: '대회 idx', type: Number, example: 1 })
+  @ApiResponse({ status: 200, description: '대회 정보 조회 성공' })
+  @ApiResponse({ status: 404, type: ErrorResponseDto })
+  async findOnePublic(
+    @Param('idx', ParseIntPipe) idx: number,
+    @Res() res: Response
+  ): Promise<void> {
+    try {
+      const competition = await this.competitionService.findOnePublic(idx);
+      sendSuccess(res, '대회 정보를 조회했습니다.', competition);
+    } catch (error: any) {
+      const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
+      sendError(res, error.message || '대회 정보 조회 중 오류가 발생했습니다.', status);
     }
   }
 

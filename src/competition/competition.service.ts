@@ -10,6 +10,7 @@ import { Mat } from '@/mat/entities/mat.entity';
 import { Player } from '@/player/entities/player.entity';
 import { Match } from '@/match/entities/match.entity';
 import { S3Service } from '@/common/services/s3.service';
+import { AuthService } from '@/auth/auth.service';
 
 /**
  * 대회 관련 비즈니스 로직 서비스
@@ -30,6 +31,7 @@ export class CompetitionService {
     @InjectRepository(Match)
     private matchRepository: Repository<Match>,
     private s3Service: S3Service,
+    private authService: AuthService,
   ) {}
 
   /**
@@ -54,11 +56,15 @@ export class CompetitionService {
         thumbnailUrl = await this.s3Service.uploadFile(thumbnailFile, folderPath);
       }
 
+      // 무작위 6자리 숫자 생성
+      const secretKey = Math.floor(100000 + Math.random() * 900000).toString();
+
       const competition = this.competitionRepository.create({
         ...createDto,
         thumbnail: thumbnailUrl,
         status: createDto.status || CompetitionStatus.REGISTRATION,
         is_show_player: createDto.is_show_player !== undefined ? createDto.is_show_player : true,
+        secret_key: secretKey,
       });
 
       const savedCompetition = await this.competitionRepository.save(competition) as unknown as Competition;
@@ -130,6 +136,95 @@ export class CompetitionService {
       }
 
       return competition;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new BadRequestException('대회 조회에 실패했습니다.');
+    }
+  }
+
+  /**
+   * 비밀키 확인
+   * @param competitionIdx 대회 idx
+   * @param code 확인할 코드
+   * @returns 코드가 일치하면 true와 토큰 정보, 아니면 false
+   */
+  async checkSecretKey(
+    competitionIdx: number,
+    code: string
+  ): Promise<{
+    isValid: boolean;
+    tokens?: { accessToken: string; refreshToken: string };
+    user?: Omit<User, 'password'>;
+  }> {
+    try {
+      const competition = await this.competitionRepository.findOne({
+        where: { idx: competitionIdx },
+        select: ['idx', 'secret_key', 'master_idx'],
+        relations: ['master'],
+      });
+
+      if (!competition) {
+        throw new NotFoundException('대회 정보를 찾을 수 없습니다.');
+      }
+
+      // secret_key가 없으면 false 반환
+      if (!competition.secret_key) {
+        return { isValid: false };
+      }
+
+      // 코드가 일치하는지 확인
+      const isValid = competition.secret_key === code;
+
+      if (!isValid) {
+        return { isValid: false };
+      }
+
+      // 코드가 일치하면 대회 주최자 정보 조회
+      const master = await this.userRepository.findOne({
+        where: { idx: competition.master_idx },
+      });
+
+      if (!master) {
+        throw new NotFoundException('대회 주최자 정보를 찾을 수 없습니다.');
+      }
+
+      // 토큰 생성
+      const tokens = await this.authService.generateTokens(master);
+
+      // 비밀번호 제외하고 반환
+      const { password, ...userWithoutPassword } = master;
+
+      return {
+        isValid: true,
+        tokens,
+        user: userWithoutPassword,
+      };
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new BadRequestException('비밀키 확인 중 오류가 발생했습니다.');
+    }
+  }
+
+  /**
+   * 특정 대회 조회 (공개 - 그룹, 매트, 선수, secret_key 제외)
+   */
+  async findOnePublic(idx: number): Promise<any> {
+    try {
+      const competition = await this.competitionRepository.findOne({
+        where: { idx },
+      });
+
+      if (!competition) {
+        throw new NotFoundException('대회 정보를 찾을 수 없습니다.');
+      }
+
+      // secret_key 제외하고 반환
+      const { secret_key, ...competitionWithoutSecret } = competition;
+      return competitionWithoutSecret;
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;

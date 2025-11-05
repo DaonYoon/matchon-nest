@@ -135,6 +135,16 @@ export class Competition extends BaseEntity {
   })
   is_show_player: boolean;
 
+  @Column({
+    type: 'varchar',
+    length: 10,
+    nullable: true,
+    comment: '대회 비밀키 (6자리 숫자)'
+  })
+  @IsOptional()
+  @IsString({ message: '비밀키는 문자열이어야 합니다.' })
+  secret_key: string | null;
+
   // 관계 설정
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'master_idx', referencedColumnName: 'idx' })
