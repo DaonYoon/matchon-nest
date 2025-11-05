@@ -54,9 +54,10 @@ export class MatchController {
   /**
    * 그룹의 대진표 조회
    */
-  @Get('group/:groupIdx')
+  @Get('group/:competitonIdx/:groupIdx')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
+  @ApiParam({ name: 'competitonIdx', description: '대회 idx', type: Number, example: 1 })
   @ApiParam({ name: 'groupIdx', description: '그룹 idx', type: Number, example: 1 })
   @ApiOperation({
     summary: '그룹 대진표 조회',
@@ -66,18 +67,53 @@ export class MatchController {
   @ApiResponse({ status: 404, type: ErrorResponseDto })
   @ApiResponse({ status: 401, type: ErrorResponseDto })
   async findBracketByGroup(
+    @Param('competitonIdx', ParseIntPipe) competitonIdx: number,
     @Param('groupIdx', ParseIntPipe) groupIdx: number,
     @Req() req: Request,
     @Res() res: Response
   ): Promise<void> {
     try {
-      const matches = await this.matchService.findBracketByGroup(groupIdx);
+      const matches = await this.matchService.findBracketByGroup(competitonIdx, groupIdx);
       sendSuccess(res, '대진표를 조회했습니다.', matches);
     } catch (error: any) {
       const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
       sendError(
         res,
         error.message || '대진표 조회 중 오류가 발생했습니다.',
+        status
+      );
+    }
+  }
+
+  /**
+   * 대회별 매트별 경기 목록 조회 (order 낮은 순)
+   */
+  @Get(':competitionIdx/:matIdx')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiParam({ name: 'competitionIdx', description: '대회 idx', type: Number, example: 1 })
+  @ApiParam({ name: 'matIdx', description: '매트 idx', type: Number, example: 1 })
+  @ApiOperation({
+    summary: '대회별 매트별 경기 목록 조회',
+    description: '특정 대회의 특정 매트에 해당하는 경기 목록을 order가 낮은 순으로 조회합니다.',
+  })
+  @ApiResponse({ status: 200, description: '경기 목록 조회 성공' })
+  @ApiResponse({ status: 404, type: ErrorResponseDto })
+  @ApiResponse({ status: 401, type: ErrorResponseDto })
+  async findByCompetitionAndMat(
+    @Param('competitionIdx', ParseIntPipe) competitionIdx: number,
+    @Param('matIdx', ParseIntPipe) matIdx: number,
+    @Req() req: Request,
+    @Res() res: Response
+  ): Promise<void> {
+    try {
+      const matches = await this.matchService.findByCompetitionAndMat(competitionIdx, matIdx);
+      sendSuccess(res, '경기 목록을 조회했습니다.', matches);
+    } catch (error: any) {
+      const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
+      sendError(
+        res,
+        error.message || '경기 목록 조회 중 오류가 발생했습니다.',
         status
       );
     }

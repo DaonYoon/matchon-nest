@@ -1,13 +1,17 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
-import { Match, MatchStatus } from './entities/match.entity';
-import { CreateMatchBracketDto } from './dto/create-match-bracket.dto';
-import { UpdateMatchResultDto } from './dto/update-match-result.dto';
-import { UpdateMatchOrderDto } from './dto/update-match-order.dto';
-import { Group } from '@/group/entities/group.entity';
-import { Player } from '@/player/entities/player.entity';
-import { Mat } from '@/mat/entities/mat.entity';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository, In } from "typeorm";
+import { Match, MatchStatus } from "./entities/match.entity";
+import { CreateMatchBracketDto } from "./dto/create-match-bracket.dto";
+import { UpdateMatchResultDto } from "./dto/update-match-result.dto";
+import { UpdateMatchOrderDto } from "./dto/update-match-order.dto";
+import { Group } from "@/group/entities/group.entity";
+import { Player } from "@/player/entities/player.entity";
+import { Mat } from "@/mat/entities/mat.entity";
 
 /**
  * 경기 관련 비즈니스 로직 서비스
@@ -22,7 +26,7 @@ export class MatchService {
     @InjectRepository(Player)
     private playerRepository: Repository<Player>,
     @InjectRepository(Mat)
-    private matRepository: Repository<Mat>,
+    private matRepository: Repository<Mat>
   ) {}
 
   /**
@@ -39,7 +43,7 @@ export class MatchService {
       });
 
       if (!group) {
-        throw new NotFoundException('그룹 정보를 찾을 수 없습니다.');
+        throw new NotFoundException("그룹 정보를 찾을 수 없습니다.");
       }
 
       // 기존 대진표가 있는지 확인
@@ -48,17 +52,21 @@ export class MatchService {
       });
 
       if (existingMatches.length > 0) {
-        throw new BadRequestException('이미 대진표가 생성되어 있습니다. 기존 대진표를 삭제한 후 다시 생성해주세요.');
+        throw new BadRequestException(
+          "이미 대진표가 생성되어 있습니다. 기존 대진표를 삭제한 후 다시 생성해주세요."
+        );
       }
 
       // 선수 수 확인
       const playerCount = createDto.players.length;
       if (playerCount < 2) {
-        throw new BadRequestException('최소 2명의 선수가 필요합니다.');
+        throw new BadRequestException("최소 2명의 선수가 필요합니다.");
       }
 
       // 시드 정렬 (1번 시드가 가장 위)
-      const sortedPlayers = [...createDto.players].sort((a, b) => a.seed - b.seed);
+      const sortedPlayers = [...createDto.players].sort(
+        (a, b) => a.seed - b.seed
+      );
 
       // 토너먼트 라운드 계산
       const totalRounds = Math.ceil(Math.log2(playerCount));
@@ -74,7 +82,11 @@ export class MatchService {
       for (let round = totalRounds; round >= 1; round--) {
         const matchesInRound = Math.pow(2, round - 1);
 
-        for (let matchNumber = 1; matchNumber <= matchesInRound; matchNumber++) {
+        for (
+          let matchNumber = 1;
+          matchNumber <= matchesInRound;
+          matchNumber++
+        ) {
           const match = this.matchRepository.create({
             group_idx: createDto.group_idx,
             round: matchesInRound,
@@ -104,7 +116,9 @@ export class MatchService {
       }
 
       // 첫 라운드에 선수 배정
-      const firstRoundMatches = matches.filter(m => m.round === Math.pow(2, totalRounds - 1));
+      const firstRoundMatches = matches.filter(
+        (m) => m.round === Math.pow(2, totalRounds - 1)
+      );
       const firstRoundCount = firstRoundMatches.length;
 
       // 시드에 따라 선수 배정
@@ -135,7 +149,9 @@ export class MatchService {
           match.player2_idx = player.player_idx;
         } else {
           // 이미 두 선수가 배정된 경우 부전승 처리
-          throw new BadRequestException(`시드 ${seed}의 선수 배정에 실패했습니다.`);
+          throw new BadRequestException(
+            `시드 ${seed}의 선수 배정에 실패했습니다.`
+          );
         }
       }
 
@@ -144,7 +160,11 @@ export class MatchService {
         const currentRoundMatches = Math.pow(2, round - 1);
         const nextRoundMatches = Math.pow(2, round - 2);
 
-        for (let matchNumber = 1; matchNumber <= nextRoundMatches; matchNumber++) {
+        for (
+          let matchNumber = 1;
+          matchNumber <= nextRoundMatches;
+          matchNumber++
+        ) {
           const currentMatchKey = `${round}-${matchNumber}`;
           const nextMatchKey = `${round - 1}-${matchNumber}`;
 
@@ -173,14 +193,25 @@ export class MatchService {
         const currentRoundMatches = Math.pow(2, round - 1);
         const nextRoundMatches = Math.pow(2, round - 2);
 
-        for (let matchNumber = 1; matchNumber <= nextRoundMatches; matchNumber++) {
+        for (
+          let matchNumber = 1;
+          matchNumber <= nextRoundMatches;
+          matchNumber++
+        ) {
           const currentMatchIndex = (matchNumber - 1) * 2;
           const nextMatchIndex = matchNumber - 1;
 
-          const currentMatches = savedMatches.filter(m => m.round === Math.pow(2, round - 1));
-          const nextMatches = savedMatches.filter(m => m.round === Math.pow(2, round - 2));
+          const currentMatches = savedMatches.filter(
+            (m) => m.round === Math.pow(2, round - 1)
+          );
+          const nextMatches = savedMatches.filter(
+            (m) => m.round === Math.pow(2, round - 2)
+          );
 
-          if (currentMatches[currentMatchIndex] && nextMatches[nextMatchIndex]) {
+          if (
+            currentMatches[currentMatchIndex] &&
+            nextMatches[nextMatchIndex]
+          ) {
             const currentMatch = currentMatches[currentMatchIndex];
             const nextMatch = nextMatches[nextMatchIndex];
             currentMatch.next_match_idx = nextMatch.idx;
@@ -191,10 +222,13 @@ export class MatchService {
 
       return savedMatches;
     } catch (error) {
-      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException
+      ) {
         throw error;
       }
-      throw new BadRequestException('대진표 생성에 실패했습니다.');
+      throw new BadRequestException("대진표 생성에 실패했습니다.");
     }
   }
 
@@ -224,24 +258,54 @@ export class MatchService {
   }
 
   /**
-   * 그룹의 대진표 조회 (선수 정보 포함)
+   * 대회별 매트별 경기 목록 조회 (order 낮은 순)
+   * @param competitionIdx 대회 idx
+   * @param matIdx 매트 idx
+   * @returns 경기 목록 (선수 정보 포함)
    */
-  async findBracketByGroup(groupIdx: number): Promise<any[]> {
+  async findByCompetitionAndMat(
+    competitionIdx: number,
+    matIdx: number
+  ): Promise<any[]> {
     try {
-      // 그룹 존재 확인
-      const group = await this.groupRepository.findOne({
-        where: { idx: groupIdx },
-      });
+      // 대회 확인
+      const competition = await this.groupRepository
+        .createQueryBuilder("group")
+        .where("group.competition_idx = :competitionIdx", { competitionIdx })
+        .getOne();
 
-      if (!group) {
-        throw new NotFoundException('그룹 정보를 찾을 수 없습니다.');
+      if (!competition) {
+        throw new NotFoundException("대회 정보를 찾을 수 없습니다.");
       }
 
-      // 해당 그룹의 모든 경기 조회
+      // 매트 확인
+      const mat = await this.matRepository.findOne({
+        where: { idx: matIdx, competition_idx: competitionIdx },
+      });
+
+      if (!mat) {
+        throw new NotFoundException(
+          "매트 정보를 찾을 수 없거나 해당 대회에 속하지 않습니다."
+        );
+      }
+
+      // 해당 대회와 매트에 속하는 그룹들의 idx 조회
+      const groups = await this.groupRepository.find({
+        where: { competition_idx: competitionIdx, mat_idx: matIdx },
+        select: ["idx"],
+      });
+
+      const groupIndices = groups.map((g) => g.idx);
+
+      if (groupIndices.length === 0) {
+        return [];
+      }
+
+      // 해당 그룹들의 경기 조회 (order 낮은 순)
       const matches = await this.matchRepository.find({
-        where: { group_idx: groupIdx },
-        relations: ['player1', 'player2', 'winner'],
-        order: { round: 'DESC', match_number: 'ASC' },
+        where: { group_idx: In(groupIndices) },
+        relations: ["player1", "player2", "winner", "group"],
+        order: { order: "ASC" },
       });
 
       // 선수 정보를 포함한 경기 데이터 반환
@@ -261,55 +325,154 @@ export class MatchService {
         score_player2: match.score_player2,
         order: match.order,
         // 선수 정보 포함
-        player1: match.player1 ? {
-          idx: match.player1.idx,
-          name: match.player1.name,
-          team_name: match.player1.team_name,
-          phone: match.player1.phone,
-          is_paid: match.player1.is_paid,
-          is_weigh_in_passed: match.player1.is_weigh_in_passed,
-        } : null,
-        player2: match.player2 ? {
-          idx: match.player2.idx,
-          name: match.player2.name,
-          team_name: match.player2.team_name,
-          phone: match.player2.phone,
-          is_paid: match.player2.is_paid,
-          is_weigh_in_passed: match.player2.is_weigh_in_passed,
-        } : null,
-        winner: match.winner ? {
-          idx: match.winner.idx,
-          name: match.winner.name,
-          team_name: match.winner.team_name,
-          phone: match.winner.phone,
-        } : null,
+        player1: match.player1
+          ? {
+              idx: match.player1.idx,
+              name: match.player1.name,
+              team_name: match.player1.team_name,
+              phone: match.player1.phone,
+              is_paid: match.player1.is_paid,
+              is_weigh_in_passed: match.player1.is_weigh_in_passed,
+            }
+          : null,
+        player2: match.player2
+          ? {
+              idx: match.player2.idx,
+              name: match.player2.name,
+              team_name: match.player2.team_name,
+              phone: match.player2.phone,
+              is_paid: match.player2.is_paid,
+              is_weigh_in_passed: match.player2.is_weigh_in_passed,
+            }
+          : null,
+        winner: match.winner
+          ? {
+              idx: match.winner.idx,
+              name: match.winner.name,
+              team_name: match.winner.team_name,
+              phone: match.winner.phone,
+            }
+          : null,
+        // 그룹 정보 포함
+        group: match.group
+          ? {
+              idx: match.group.idx,
+              name: match.group.name,
+              competition_idx: match.group.competition_idx,
+              mat_idx: match.group.mat_idx,
+            }
+          : null,
       }));
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;
       }
-      throw new BadRequestException('대진표 조회에 실패했습니다.');
+      throw new BadRequestException("경기 목록 조회에 실패했습니다.");
+    }
+  }
+
+  /**
+   * 그룹의 대진표 조회 (선수 정보 포함)
+   */
+  async findBracketByGroup(
+    competitonIdx: number,
+    groupIdx: number
+  ): Promise<any[]> {
+    try {
+      // 그룹 존재 확인
+      const group = await this.groupRepository.findOne({
+        where: { idx: groupIdx, competition_idx: competitonIdx },
+      });
+
+      if (!group) {
+        throw new NotFoundException("그룹 정보를 찾을 수 없습니다.");
+      }
+
+      // 해당 그룹의 모든 경기 조회
+      const matches = await this.matchRepository.find({
+        where: { group_idx: groupIdx },
+        relations: ["player1", "player2", "winner"],
+        order: { round: "DESC", match_number: "ASC" },
+      });
+
+      // 선수 정보를 포함한 경기 데이터 반환
+      return matches.map((match) => ({
+        idx: match.idx,
+        created_at: match.created_at,
+        updated_at: match.updated_at,
+        group_idx: match.group_idx,
+        round: match.round,
+        match_number: match.match_number,
+        player1_idx: match.player1_idx,
+        player2_idx: match.player2_idx,
+        winner_idx: match.winner_idx,
+        status: match.status,
+        next_match_idx: match.next_match_idx,
+        score_player1: match.score_player1,
+        score_player2: match.score_player2,
+        order: match.order,
+        // 선수 정보 포함
+        player1: match.player1
+          ? {
+              idx: match.player1.idx,
+              name: match.player1.name,
+              team_name: match.player1.team_name,
+              phone: match.player1.phone,
+              is_paid: match.player1.is_paid,
+              is_weigh_in_passed: match.player1.is_weigh_in_passed,
+            }
+          : null,
+        player2: match.player2
+          ? {
+              idx: match.player2.idx,
+              name: match.player2.name,
+              team_name: match.player2.team_name,
+              phone: match.player2.phone,
+              is_paid: match.player2.is_paid,
+              is_weigh_in_passed: match.player2.is_weigh_in_passed,
+            }
+          : null,
+        winner: match.winner
+          ? {
+              idx: match.winner.idx,
+              name: match.winner.name,
+              team_name: match.winner.team_name,
+              phone: match.winner.phone,
+            }
+          : null,
+      }));
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new BadRequestException("대진표 조회에 실패했습니다.");
     }
   }
 
   /**
    * 경기 결과 입력 및 승자 다음 경기로 진출 처리
    */
-  async updateMatchResult(matchIdx: number, updateDto: UpdateMatchResultDto): Promise<Match> {
+  async updateMatchResult(
+    matchIdx: number,
+    updateDto: UpdateMatchResultDto
+  ): Promise<Match> {
     try {
       // 경기 존재 확인
       const match = await this.matchRepository.findOne({
         where: { idx: matchIdx },
-        relations: ['player1', 'player2', 'nextMatch'],
+        relations: ["player1", "player2", "nextMatch"],
       });
 
       if (!match) {
-        throw new NotFoundException('경기 정보를 찾을 수 없습니다.');
+        throw new NotFoundException("경기 정보를 찾을 수 없습니다.");
       }
 
       // 승자가 경기에 참가한 선수 중 한 명인지 확인
-      if (updateDto.winner_idx !== match.player1_idx && updateDto.winner_idx !== match.player2_idx) {
-        throw new BadRequestException('승자는 경기에 참가한 선수여야 합니다.');
+      if (
+        updateDto.winner_idx !== match.player1_idx &&
+        updateDto.winner_idx !== match.player2_idx
+      ) {
+        throw new BadRequestException("승자는 경기에 참가한 선수여야 합니다.");
       }
 
       // 경기 결과 업데이트
@@ -339,7 +502,7 @@ export class MatchService {
           if (currentRound > nextRound) {
             // 다음 라운드로 진출
             // 홀수 경기는 player1, 짝수 경기는 player2
-            const isPlayer1Position = (match.match_number % 2 === 1);
+            const isPlayer1Position = match.match_number % 2 === 1;
             if (isPlayer1Position) {
               nextMatch.player1_idx = updateDto.winner_idx;
             } else {
@@ -353,17 +516,23 @@ export class MatchService {
 
       return savedMatch;
     } catch (error) {
-      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException
+      ) {
         throw error;
       }
-      throw new BadRequestException('경기 결과 입력에 실패했습니다.');
+      throw new BadRequestException("경기 결과 입력에 실패했습니다.");
     }
   }
 
   /**
    * 경기 순서 수정
    */
-  async updateOrder(matchIdx: number, updateDto: UpdateMatchOrderDto): Promise<Match> {
+  async updateOrder(
+    matchIdx: number,
+    updateDto: UpdateMatchOrderDto
+  ): Promise<Match> {
     try {
       // 경기 존재 확인
       const match = await this.matchRepository.findOne({
@@ -371,7 +540,7 @@ export class MatchService {
       });
 
       if (!match) {
-        throw new NotFoundException('경기 정보를 찾을 수 없습니다.');
+        throw new NotFoundException("경기 정보를 찾을 수 없습니다.");
       }
 
       // 순서 업데이트
@@ -384,7 +553,7 @@ export class MatchService {
       if (error instanceof NotFoundException) {
         throw error;
       }
-      throw new BadRequestException('경기 순서 수정에 실패했습니다.');
+      throw new BadRequestException("경기 순서 수정에 실패했습니다.");
     }
   }
 
@@ -398,7 +567,7 @@ export class MatchService {
       });
 
       if (!match) {
-        throw new NotFoundException('경기 정보를 찾을 수 없습니다.');
+        throw new NotFoundException("경기 정보를 찾을 수 없습니다.");
       }
 
       await this.matchRepository.remove(match);
@@ -406,8 +575,7 @@ export class MatchService {
       if (error instanceof NotFoundException) {
         throw error;
       }
-      throw new BadRequestException('경기 삭제에 실패했습니다.');
+      throw new BadRequestException("경기 삭제에 실패했습니다.");
     }
   }
 }
-
