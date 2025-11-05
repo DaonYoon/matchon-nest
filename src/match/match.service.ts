@@ -157,67 +157,57 @@ export class MatchService {
         }
       }
 
-      // 다음 경기 연결 설정
-      for (let round = totalRounds; round > 1; round--) {
-        const currentRoundMatches = Math.pow(2, round - 1);
-        const nextRoundMatches = Math.pow(2, round - 2);
-
-        for (
-          let matchNumber = 1;
-          matchNumber <= nextRoundMatches;
-          matchNumber++
-        ) {
-          const currentMatchKey = `${round}-${matchNumber}`;
-          const nextMatchKey = `${round - 1}-${matchNumber}`;
-
-          const currentMatch = matchMap.get(currentMatchKey);
-          const nextMatch = matchMap.get(nextMatchKey);
-
-          if (currentMatch && nextMatch) {
-            // 현재 경기의 승자가 다음 경기의 선수1 또는 선수2가 됨
-            // 홀수 번호는 선수1, 짝수 번호는 선수2
-            if (matchNumber % 2 === 1) {
-              // 선수1 위치에 배정
-              nextMatch.player1_idx = null; // 실제로는 경기 결과 입력 시 업데이트
-            } else {
-              // 선수2 위치에 배정
-              nextMatch.player2_idx = null; // 실제로는 경기 결과 입력 시 업데이트
-            }
-          }
-        }
-      }
+      // 상위 경기에 소스 경기 정보 설정 (승자가 확정되기 전까지 표시용)
+      // 예선전 경기들이 저장된 후 idx를 알 수 있으므로, 저장 후 업데이트
 
       // 모든 경기 저장
       const savedMatches = await this.matchRepository.save(matches);
 
-      // 다음 경기 연결 업데이트
+      // 다음 경기 연결 및 소스 경기 정보 업데이트
       for (let round = totalRounds; round > 1; round--) {
         const currentRoundMatches = Math.pow(2, round - 1);
         const nextRoundMatches = Math.pow(2, round - 2);
 
+        // 현재 라운드와 다음 라운드 경기 분리
+        const currentMatches = savedMatches.filter(
+          (m) => m.round === Math.pow(2, round - 1)
+        );
+        const nextMatches = savedMatches.filter(
+          (m) => m.round === Math.pow(2, round - 2)
+        );
+
+        // 다음 라운드 경기별로 소스 경기 정보 설정
         for (
           let matchNumber = 1;
           matchNumber <= nextRoundMatches;
           matchNumber++
         ) {
-          const currentMatchIndex = (matchNumber - 1) * 2;
-          const nextMatchIndex = matchNumber - 1;
+          // 다음 경기
+          const nextMatch = nextMatches[matchNumber - 1];
+          
+          if (!nextMatch) continue;
 
-          const currentMatches = savedMatches.filter(
-            (m) => m.round === Math.pow(2, round - 1)
-          );
-          const nextMatches = savedMatches.filter(
-            (m) => m.round === Math.pow(2, round - 2)
-          );
+          // 현재 라운드에서 이 다음 경기로 진출할 두 경기 찾기
+          // 경기 번호 1, 2 → 다음 경기 1
+          // 경기 번호 3, 4 → 다음 경기 2
+          // 경기 번호 5, 6 → 다음 경기 3
+          // 공식: (matchNumber - 1) * 2 + 1, (matchNumber - 1) * 2 + 2
+          const sourceMatch1Index = (matchNumber - 1) * 2;
+          const sourceMatch2Index = (matchNumber - 1) * 2 + 1;
 
-          if (
-            currentMatches[currentMatchIndex] &&
-            nextMatches[nextMatchIndex]
-          ) {
-            const currentMatch = currentMatches[currentMatchIndex];
-            const nextMatch = nextMatches[nextMatchIndex];
-            currentMatch.next_match_idx = nextMatch.idx;
-            await this.matchRepository.save(currentMatch);
+          const sourceMatch1 = currentMatches[sourceMatch1Index];
+          const sourceMatch2 = currentMatches[sourceMatch2Index];
+
+          if (sourceMatch1 && sourceMatch2) {
+            // 다음 경기에 소스 경기 정보 설정
+            nextMatch.player1_source_match_idx = sourceMatch1.idx;
+            nextMatch.player2_source_match_idx = sourceMatch2.idx;
+            
+            // 다음 경기 연결 설정
+            sourceMatch1.next_match_idx = nextMatch.idx;
+            sourceMatch2.next_match_idx = nextMatch.idx;
+
+            await this.matchRepository.save([nextMatch, sourceMatch1, sourceMatch2]);
           }
         }
       }
@@ -404,64 +394,95 @@ export class MatchService {
       });
 
       // 선수 정보를 포함한 경기 데이터 반환
-      return matches.map((match) => ({
-        idx: match.idx,
-        created_at: match.created_at,
-        updated_at: match.updated_at,
-        group_idx: match.group_idx,
-        round: match.round,
-        match_number: match.match_number,
-        player1_idx: match.player1_idx,
-        player2_idx: match.player2_idx,
-        winner_idx: match.winner_idx,
-        status: match.status,
-        next_match_idx: match.next_match_idx,
-        score_player1: match.score_player1,
-        score_player2: match.score_player2,
-        order: match.order,
-        result: match.result,
-        advantage_player1: match.advantage_player1,
-        advantage_player2: match.advantage_player2,
-        penalty_player1: match.penalty_player1,
-        penalty_player2: match.penalty_player2,
-        // 그룹 정보 (경기 시간 포함)
-        group: {
-          idx: group.idx,
-          name: group.name,
-          competition_idx: group.competition_idx,
-          mat_idx: group.mat_idx,
-          match_time: group.match_time, // 경기 시간 (분 단위)
-        },
-        // 선수 정보 포함
-        player1: match.player1
-          ? {
-              idx: match.player1.idx,
-              name: match.player1.name,
-              team_name: match.player1.team_name,
-              phone: match.player1.phone,
-              is_paid: match.player1.is_paid,
-              is_weigh_in_passed: match.player1.is_weigh_in_passed,
-            }
-          : null,
-        player2: match.player2
-          ? {
-              idx: match.player2.idx,
-              name: match.player2.name,
-              team_name: match.player2.team_name,
-              phone: match.player2.phone,
-              is_paid: match.player2.is_paid,
-              is_weigh_in_passed: match.player2.is_weigh_in_passed,
-            }
-          : null,
-        winner: match.winner
+      return matches.map((match) => {
+        const matchData: any = {
+          idx: match.idx,
+          created_at: match.created_at,
+          updated_at: match.updated_at,
+          group_idx: match.group_idx,
+          round: match.round,
+          match_number: match.match_number,
+          player1_idx: match.player1_idx,
+          player2_idx: match.player2_idx,
+          winner_idx: match.winner_idx,
+          status: match.status,
+          next_match_idx: match.next_match_idx,
+          score_player1: match.score_player1,
+          score_player2: match.score_player2,
+          order: match.order,
+          result: match.result,
+          advantage_player1: match.advantage_player1,
+          advantage_player2: match.advantage_player2,
+          penalty_player1: match.penalty_player1,
+          penalty_player2: match.penalty_player2,
+          player1_source_match_idx: match.player1_source_match_idx,
+          player2_source_match_idx: match.player2_source_match_idx,
+          // 그룹 정보 (경기 시간 포함)
+          group: {
+            idx: group.idx,
+            name: group.name,
+            competition_idx: group.competition_idx,
+            mat_idx: group.mat_idx,
+            match_time: group.match_time, // 경기 시간 (분 단위)
+          },
+        };
+
+        // 선수 정보 포함 (승자가 확정되지 않은 경우 소스 경기 정보 표시)
+        if (match.player1_idx) {
+          matchData.player1 = match.player1
+            ? {
+                idx: match.player1.idx,
+                name: match.player1.name,
+                team_name: match.player1.team_name,
+                phone: match.player1.phone,
+                is_paid: match.player1.is_paid,
+                is_weigh_in_passed: match.player1.is_weigh_in_passed,
+              }
+            : null;
+        } else if (match.player1_source_match_idx) {
+          // 소스 경기 정보로 표시
+          const sourceMatch = matches.find(m => m.idx === match.player1_source_match_idx);
+          matchData.player1 = {
+            source_match_idx: match.player1_source_match_idx,
+            display_name: sourceMatch ? `${sourceMatch.match_number}번 경기 승자` : `${match.player1_source_match_idx}번 경기 승자`,
+          };
+        } else {
+          matchData.player1 = null;
+        }
+
+        if (match.player2_idx) {
+          matchData.player2 = match.player2
+            ? {
+                idx: match.player2.idx,
+                name: match.player2.name,
+                team_name: match.player2.team_name,
+                phone: match.player2.phone,
+                is_paid: match.player2.is_paid,
+                is_weigh_in_passed: match.player2.is_weigh_in_passed,
+              }
+            : null;
+        } else if (match.player2_source_match_idx) {
+          // 소스 경기 정보로 표시
+          const sourceMatch = matches.find(m => m.idx === match.player2_source_match_idx);
+          matchData.player2 = {
+            source_match_idx: match.player2_source_match_idx,
+            display_name: sourceMatch ? `${sourceMatch.match_number}번 경기 승자` : `${match.player2_source_match_idx}번 경기 승자`,
+          };
+        } else {
+          matchData.player2 = null;
+        }
+
+        matchData.winner = match.winner
           ? {
               idx: match.winner.idx,
               name: match.winner.name,
               team_name: match.winner.team_name,
               phone: match.winner.phone,
             }
-          : null,
-      }));
+          : null;
+
+        return matchData;
+      });
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;
@@ -595,31 +616,7 @@ export class MatchService {
       const savedMatch = await this.matchRepository.save(match);
 
       // 다음 경기로 승자 진출 처리
-      if (match.next_match_idx) {
-        const nextMatch = await this.matchRepository.findOne({
-          where: { idx: match.next_match_idx },
-        });
-
-        if (nextMatch) {
-          // 다음 경기의 player1 또는 player2에 승자 배정
-          // 현재 경기가 다음 경기의 어느 위치인지 확인 (라운드와 match_number로 판단)
-          const currentRound = match.round;
-          const nextRound = nextMatch.round;
-
-          if (currentRound > nextRound) {
-            // 다음 라운드로 진출
-            // 홀수 경기는 player1, 짝수 경기는 player2
-            const isPlayer1Position = match.match_number % 2 === 1;
-            if (isPlayer1Position) {
-              nextMatch.player1_idx = updateDto.winner_idx;
-            } else {
-              nextMatch.player2_idx = updateDto.winner_idx;
-            }
-            nextMatch.status = MatchStatus.PENDING;
-            await this.matchRepository.save(nextMatch);
-          }
-        }
-      }
+      await this.advanceWinnerToNextMatch(matchIdx, updateDto.winner_idx);
 
       // WebSocket으로 실시간 업데이트 전송
       if (gateway && match.group) {
@@ -741,11 +738,21 @@ export class MatchService {
       // 경기 존재 확인 (관계 정보 포함)
       const match = await this.matchRepository.findOne({
         where: { idx: matchIdx },
-        relations: ['group'],
+        relations: ['group', 'nextMatch'],
       });
 
       if (!match) {
         throw new NotFoundException("경기 정보를 찾을 수 없습니다.");
+      }
+
+      // 승자 유효성 검사 (승자가 설정되는 경우)
+      if (updateDto.winner_idx !== undefined) {
+        if (
+          updateDto.winner_idx !== match.player1_idx &&
+          updateDto.winner_idx !== match.player2_idx
+        ) {
+          throw new BadRequestException("승자는 경기에 참가한 선수여야 합니다.");
+        }
       }
 
       // 전달된 필드만 업데이트
@@ -791,6 +798,23 @@ export class MatchService {
 
       const savedMatch = await this.matchRepository.save(match);
 
+      // 경기 상태가 END이고 승자가 설정되면 다음 경기로 승자 배정
+      const isEndingMatch = updateDto.status === MatchStatus.END || 
+                           (updateDto.status === undefined && savedMatch.status === MatchStatus.END);
+      const hasWinner = updateDto.winner_idx !== undefined || savedMatch.winner_idx !== null;
+
+      if (isEndingMatch && hasWinner) {
+        const winnerIdx = updateDto.winner_idx !== undefined ? updateDto.winner_idx : savedMatch.winner_idx;
+        if (winnerIdx) {
+          await this.advanceWinnerToNextMatch(matchIdx, winnerIdx);
+          
+          // 다음 경기도 WebSocket으로 업데이트 전송
+          if (gateway && savedMatch.next_match_idx) {
+            await gateway.broadcastMatchUpdate(savedMatch.next_match_idx);
+          }
+        }
+      }
+
       // WebSocket으로 실시간 업데이트 전송
       if (gateway && match.group) {
         await gateway.broadcastMatchUpdate(matchIdx);
@@ -802,6 +826,70 @@ export class MatchService {
         throw error;
       }
       throw new BadRequestException("경기 정보 수정에 실패했습니다.");
+    }
+  }
+
+  /**
+   * 다음 경기로 승자 배정
+   * @param matchIdx 현재 경기 idx
+   * @param winnerIdx 승자 idx
+   */
+  private async advanceWinnerToNextMatch(
+    matchIdx: number,
+    winnerIdx: number
+  ): Promise<void> {
+    try {
+      // 현재 경기 조회 (관계 정보 포함)
+      const currentMatch = await this.matchRepository.findOne({
+        where: { idx: matchIdx },
+        relations: ['nextMatch'],
+      });
+
+      if (!currentMatch || !currentMatch.next_match_idx) {
+        // 다음 경기가 없으면 종료 (결승전 등)
+        return;
+      }
+
+      // 다음 경기 조회
+      const nextMatch = await this.matchRepository.findOne({
+        where: { idx: currentMatch.next_match_idx },
+      });
+
+      if (!nextMatch) {
+        return;
+      }
+
+      // 다음 경기의 player1 또는 player2에 승자 배정
+      // 규칙: 현재 경기 번호가 홀수면 player1, 짝수면 player2
+      // 예: 예선 경기 1,2 → 4강 경기 1의 player1, player2
+      //     예선 경기 3,4 → 4강 경기 2의 player1, player2
+      const isPlayer1Position = currentMatch.match_number % 2 === 1;
+
+      if (isPlayer1Position) {
+        // player1 위치에 배정
+        nextMatch.player1_idx = winnerIdx;
+        // 소스 경기 정보 제거 (승자가 확정되었으므로)
+        nextMatch.player1_source_match_idx = null;
+      } else {
+        // player2 위치에 배정
+        nextMatch.player2_idx = winnerIdx;
+        // 소스 경기 정보 제거 (승자가 확정되었으므로)
+        nextMatch.player2_source_match_idx = null;
+      }
+
+      // 다음 경기 상태를 PENDING으로 설정 (아직 시작 전)
+      if (nextMatch.status === MatchStatus.PENDING || nextMatch.status === null) {
+        nextMatch.status = MatchStatus.PENDING;
+      }
+
+      await this.matchRepository.save(nextMatch);
+
+      // WebSocket으로 다음 경기도 업데이트 전송 (있으면)
+      // 이 부분은 match.service에서 직접 gateway를 호출할 수 없으므로
+      // controller에서 처리하도록 합니다.
+    } catch (error) {
+      // 에러가 발생해도 현재 경기 업데이트는 성공했으므로 로그만 남기고 계속 진행
+      console.error(`다음 경기로 승자 배정 중 오류: ${error.message}`, error);
     }
   }
 

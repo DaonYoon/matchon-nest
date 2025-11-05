@@ -72,5 +72,15 @@ export class UpdateMatchDto {
   @IsOptional()
   @IsNumber({}, { message: '선수2 패널티는 숫자여야 합니다.' })
   penalty_player2?: number;
+
+  @ApiPropertyOptional({ description: 'player1의 소스 경기 idx', example: 5 })
+  @IsOptional()
+  @IsNumber({}, { message: 'player1 소스 경기 idx는 숫자여야 합니다.' })
+  player1_source_match_idx?: number;
+
+  @ApiPropertyOptional({ description: 'player2의 소스 경기 idx', example: 6 })
+  @IsOptional()
+  @IsNumber({}, { message: 'player2 소스 경기 idx는 숫자여야 합니다.' })
+  player2_source_match_idx?: number;
 }
 

@@ -116,6 +116,24 @@ export class Match extends BaseEntity {
   @Column({
     type: 'int',
     nullable: true,
+    comment: 'player1의 소스 경기 idx (승자가 확정되기 전까지 표시용)'
+  })
+  @IsOptional()
+  @IsNumber({}, { message: 'player1 소스 경기 idx는 숫자여야 합니다.' })
+  player1_source_match_idx: number | null;
+
+  @Column({
+    type: 'int',
+    nullable: true,
+    comment: 'player2의 소스 경기 idx (승자가 확정되기 전까지 표시용)'
+  })
+  @IsOptional()
+  @IsNumber({}, { message: 'player2 소스 경기 idx는 숫자여야 합니다.' })
+  player2_source_match_idx: number | null;
+
+  @Column({
+    type: 'int',
+    nullable: true,
     comment: '선수1 점수 (nullable, 경기 완료 후 기록)'
   })
   @IsOptional()
