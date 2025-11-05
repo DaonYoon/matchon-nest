@@ -321,35 +321,8 @@ export class MatchService {
         advantage_player2: match.advantage_player2,
         penalty_player1: match.penalty_player1,
         penalty_player2: match.penalty_player2,
-        // 선수 정보 포함
-        player1: match.player1
-          ? {
-              idx: match.player1.idx,
-              name: match.player1.name,
-              team_name: match.player1.team_name,
-              phone: match.player1.phone,
-              is_paid: match.player1.is_paid,
-              is_weigh_in_passed: match.player1.is_weigh_in_passed,
-            }
-          : null,
-        player2: match.player2
-          ? {
-              idx: match.player2.idx,
-              name: match.player2.name,
-              team_name: match.player2.team_name,
-              phone: match.player2.phone,
-              is_paid: match.player2.is_paid,
-              is_weigh_in_passed: match.player2.is_weigh_in_passed,
-            }
-          : null,
-        winner: match.winner
-          ? {
-              idx: match.winner.idx,
-              name: match.winner.name,
-              team_name: match.winner.team_name,
-              phone: match.winner.phone,
-            }
-          : null,
+        player1_source_match_idx: match.player1_source_match_idx,
+        player2_source_match_idx: match.player2_source_match_idx,
         // 그룹 정보 포함
         group: match.group
           ? {
@@ -360,7 +333,65 @@ export class MatchService {
               match_time: match.group.match_time, // 경기 시간 (분 단위)
             }
           : null,
-      }));
+      })).map((matchData: any) => {
+        // 승자가 확정되지 않은 경우 소스 경기 정보 표시
+        const match = matches.find(m => m.idx === matchData.idx);
+        
+        if (match && match.player1) {
+          // 실제 선수 정보가 있는 경우
+          matchData.player1 = {
+            idx: match.player1.idx,
+            name: match.player1.name,
+            team_name: match.player1.team_name,
+            phone: match.player1.phone,
+            is_paid: match.player1.is_paid,
+            is_weigh_in_passed: match.player1.is_weigh_in_passed,
+          };
+        } else if (!matchData.player1_idx && matchData.player1_source_match_idx) {
+          // 소스 경기 정보로 표시
+          const sourceMatch = matches.find(m => m.idx === matchData.player1_source_match_idx);
+          matchData.player1 = {
+            source_match_idx: matchData.player1_source_match_idx,
+            display_name: sourceMatch ? `${sourceMatch.match_number}번 경기 승자` : `${matchData.player1_source_match_idx}번 경기 승자`,
+          };
+        } else {
+          matchData.player1 = null;
+        }
+
+        if (match && match.player2) {
+          // 실제 선수 정보가 있는 경우
+          matchData.player2 = {
+            idx: match.player2.idx,
+            name: match.player2.name,
+            team_name: match.player2.team_name,
+            phone: match.player2.phone,
+            is_paid: match.player2.is_paid,
+            is_weigh_in_passed: match.player2.is_weigh_in_passed,
+          };
+        } else if (!matchData.player2_idx && matchData.player2_source_match_idx) {
+          // 소스 경기 정보로 표시
+          const sourceMatch = matches.find(m => m.idx === matchData.player2_source_match_idx);
+          matchData.player2 = {
+            source_match_idx: matchData.player2_source_match_idx,
+            display_name: sourceMatch ? `${sourceMatch.match_number}번 경기 승자` : `${matchData.player2_source_match_idx}번 경기 승자`,
+          };
+        } else {
+          matchData.player2 = null;
+        }
+
+        if (match && match.winner) {
+          matchData.winner = {
+            idx: match.winner.idx,
+            name: match.winner.name,
+            team_name: match.winner.team_name,
+            phone: match.winner.phone,
+          };
+        } else {
+          matchData.winner = null;
+        }
+
+        return matchData;
+      });
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;
@@ -507,7 +538,7 @@ export class MatchService {
       }
 
       // 선수 정보를 포함한 경기 데이터 반환
-      return {
+      const matchData: any = {
         idx: match.idx,
         created_at: match.created_at,
         updated_at: match.updated_at,
@@ -527,30 +558,8 @@ export class MatchService {
         advantage_player2: match.advantage_player2,
         penalty_player1: match.penalty_player1,
         penalty_player2: match.penalty_player2,
-        player1: match.player1
-          ? {
-              idx: match.player1.idx,
-              name: match.player1.name,
-              team_name: match.player1.team_name,
-              phone: match.player1.phone,
-            }
-          : null,
-        player2: match.player2
-          ? {
-              idx: match.player2.idx,
-              name: match.player2.name,
-              team_name: match.player2.team_name,
-              phone: match.player2.phone,
-            }
-          : null,
-        winner: match.winner
-          ? {
-              idx: match.winner.idx,
-              name: match.winner.name,
-              team_name: match.winner.team_name,
-              phone: match.winner.phone,
-            }
-          : null,
+        player1_source_match_idx: match.player1_source_match_idx,
+        player2_source_match_idx: match.player2_source_match_idx,
         group: match.group
           ? {
               idx: match.group.idx,
@@ -568,6 +577,50 @@ export class MatchService {
             }
           : null,
       };
+
+      // 승자가 확정되지 않은 경우 소스 경기 정보 표시
+      if (!match.player1_idx && match.player1_source_match_idx) {
+        matchData.player1 = {
+          source_match_idx: match.player1_source_match_idx,
+          display_name: `${match.player1_source_match_idx}번 경기 승자`,
+        };
+      } else if (match.player1) {
+        matchData.player1 = {
+          idx: match.player1.idx,
+          name: match.player1.name,
+          team_name: match.player1.team_name,
+          phone: match.player1.phone,
+        };
+      } else {
+        matchData.player1 = null;
+      }
+
+      if (!match.player2_idx && match.player2_source_match_idx) {
+        matchData.player2 = {
+          source_match_idx: match.player2_source_match_idx,
+          display_name: `${match.player2_source_match_idx}번 경기 승자`,
+        };
+      } else if (match.player2) {
+        matchData.player2 = {
+          idx: match.player2.idx,
+          name: match.player2.name,
+          team_name: match.player2.team_name,
+          phone: match.player2.phone,
+        };
+      } else {
+        matchData.player2 = null;
+      }
+
+      matchData.winner = match.winner
+        ? {
+            idx: match.winner.idx,
+            name: match.winner.name,
+            team_name: match.winner.team_name,
+            phone: match.winner.phone,
+          }
+        : null;
+
+      return matchData;
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;
