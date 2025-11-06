@@ -19,7 +19,8 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "seed:create": "ts-node -r tsconfig-paths/register -r dotenv/config src/scripts/create-dummy-data.ts",
-    "seed:delete": "ts-node -r tsconfig-paths/register -r dotenv/config src/scripts/delete-dummy-data.ts"
+    "seed:delete": "ts-node -r tsconfig-paths/register -r dotenv/config src/scripts/delete-dummy-data.ts",
+    "seed:large": "ts-node -r tsconfig-paths/register -r dotenv/config src/scripts/create-large-test-data.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.921.0",

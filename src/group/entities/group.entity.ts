@@ -9,7 +9,6 @@ import { Match } from '@/match/entities/match.entity';
 /**
  * 그룹 정보를 저장하는 엔티티
  * name: 그룹명 (예: "남자 어덜트", "여자 흰띠 초등부")
- * weight_classes: 체급 목록 (JSON 배열, 예: ["-70", "-76", "무제한"])
  * competition_idx: 소속 대회 idx
  * mat_idx: 배정된 매트 idx (nullable, 나중에 배정 가능)
  */
