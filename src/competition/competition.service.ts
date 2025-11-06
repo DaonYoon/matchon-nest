@@ -299,6 +299,9 @@ export class CompetitionService {
       if (updateDto.region !== undefined) {
         competition.region = updateDto.region;
       }
+      if (updateDto.address !== undefined) {
+        competition.address = updateDto.address;
+      }
       if (updateDto.type !== undefined) {
         competition.type = updateDto.type;
       }

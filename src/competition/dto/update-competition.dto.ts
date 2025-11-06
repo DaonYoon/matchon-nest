@@ -21,6 +21,11 @@ export class UpdateCompetitionDto {
   @IsString({ message: '지역은 문자열이어야 합니다.' })
   region?: string;
 
+  @ApiPropertyOptional({ description: '대회장 주소', example: '서울특별시 강남구 테헤란로 123' })
+  @IsOptional()
+  @IsString({ message: '대회장 주소는 문자열이어야 합니다.' })
+  address?: string;
+
   @ApiPropertyOptional({ description: '대회 타입', example: 'championship' })
   @IsOptional()
   @IsString({ message: '대회 타입은 문자열이어야 합니다.' })

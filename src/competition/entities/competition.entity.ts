@@ -60,6 +60,16 @@ export class Competition extends BaseEntity {
 
   @Column({
     type: 'varchar',
+    length: 500,
+    nullable: true,
+    comment: '대회장 주소'
+  })
+  @IsOptional()
+  @IsString({ message: '대회장 주소는 문자열이어야 합니다.' })
+  address: string | null;
+
+  @Column({
+    type: 'varchar',
     length: 50,
     nullable: false,
     comment: '대회 타입'
