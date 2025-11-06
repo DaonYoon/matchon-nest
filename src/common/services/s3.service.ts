@@ -15,8 +15,8 @@ export class S3Service {
   private readonly isConfigured: boolean;
 
   constructor(private configService: ConfigService) {
-    const accessKey = this.configService.get<string>('SAVE_ACCESS_KEY');
-    const secretKey = this.configService.get<string>('HIDE_ACCESS_KEY');
+    const accessKey = this.configService.get<string>('AWS_CLIENT_KEY');
+    const secretKey = this.configService.get<string>('AWS_SECRET_KEY');
     this.region = this.configService.get<string>('AWS_S3_REGION', 'ap-northeast-2');
     this.bucketName = this.configService.get<string>('AWS_S3_BUCKET', 'matchons3');
 

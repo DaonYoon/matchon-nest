@@ -48,20 +48,20 @@ export class CompetitionService {
         throw new NotFoundException('주최자 정보를 찾을 수 없습니다.');
       }
 
+      // 무작위 6자리 숫자 생성
+      const secretKey = Math.floor(100000 + Math.random() * 900000).toString();
+
       let thumbnailUrl: string | null = createDto.thumbnail || null;
 
-      // 썸네일 파일이 있으면 S3에 업로드
+      // 썸네일 파일이 있으면 S3에 업로드 (master_idx 폴더에 업로드)
       if (thumbnailFile) {
         const folderPath = `contest_thumbnail/${createDto.master_idx}`;
         thumbnailUrl = await this.s3Service.uploadFile(thumbnailFile, folderPath);
       }
 
-      // 무작위 6자리 숫자 생성
-      const secretKey = Math.floor(100000 + Math.random() * 900000).toString();
-
       const competition = this.competitionRepository.create({
         ...createDto,
-        thumbnail: thumbnailUrl,
+        thumbnail: thumbnailUrl, // S3 URL로 저장
         status: createDto.status || CompetitionStatus.REGISTRATION,
         is_show_player: createDto.is_show_player !== undefined ? createDto.is_show_player : true,
         secret_key: secretKey,
@@ -69,14 +69,7 @@ export class CompetitionService {
 
       const savedCompetition = await this.competitionRepository.save(competition) as unknown as Competition;
 
-      // 저장 후 대회 idx를 얻었으므로 썸네일 경로 업데이트
-      if (thumbnailFile && savedCompetition.idx) {
-        const folderPath = `contest_thumbnail/${savedCompetition.idx}`;
-        thumbnailUrl = await this.s3Service.uploadFile(thumbnailFile, folderPath);
-        savedCompetition.thumbnail = thumbnailUrl;
-        return await this.competitionRepository.save(savedCompetition);
-      }
-
+      // DB에는 이미 S3 URL로 저장되어 있음
       return savedCompetition;
     } catch (error) {
       if (error instanceof NotFoundException) {
@@ -285,19 +278,44 @@ export class CompetitionService {
     try {
       const competition = await this.findOne(idx, userId);
 
-      let thumbnailUrl = updateDto.thumbnail || competition.thumbnail;
-
-      // 썸네일 파일이 있으면 S3에 업로드
+      // 썸네일 파일이 있으면 S3에 업로드하고 URL로 저장
       if (thumbnailFile) {
         const folderPath = `contest_thumbnail/${idx}`;
-        thumbnailUrl = await this.s3Service.uploadFile(thumbnailFile, folderPath);
+        const thumbnailUrl = await this.s3Service.uploadFile(thumbnailFile, folderPath);
+        competition.thumbnail = thumbnailUrl; // S3 URL로 저장
+      } else if (updateDto.thumbnail !== undefined) {
+        // 썸네일 URL이 직접 제공된 경우
+        competition.thumbnail = updateDto.thumbnail;
       }
 
-      // 수정할 데이터 병합
-      Object.assign(competition, {
-        ...updateDto,
-        thumbnail: thumbnailUrl,
-      });
+      // 전달된 필드만 업데이트
+      if (updateDto.name !== undefined) {
+        competition.name = updateDto.name;
+      }
+      if (updateDto.description !== undefined) {
+        competition.description = updateDto.description;
+      }
+      if (updateDto.region !== undefined) {
+        competition.region = updateDto.region;
+      }
+      if (updateDto.type !== undefined) {
+        competition.type = updateDto.type;
+      }
+      if (updateDto.start_date !== undefined) {
+        competition.start_date = updateDto.start_date;
+      }
+      if (updateDto.request_start_date !== undefined) {
+        competition.request_start_date = updateDto.request_start_date;
+      }
+      if (updateDto.request_end_date !== undefined) {
+        competition.request_end_date = updateDto.request_end_date;
+      }
+      if (updateDto.status !== undefined) {
+        competition.status = updateDto.status;
+      }
+      if (updateDto.is_show_player !== undefined) {
+        competition.is_show_player = updateDto.is_show_player;
+      }
 
       return await this.competitionRepository.save(competition);
     } catch (error) {

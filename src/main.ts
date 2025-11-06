@@ -33,11 +33,28 @@ async function bootstrap() {
   const isDevelopment = configService.get('NODE_ENV', 'development') !== 'production';
   
   // CORS 설정
+  // 개발 모드: localhost만 허용
+  // 프로덕션: https://match-on.kr에서의 요청만 허용
+  const allowedOrigins = isDevelopment 
+    ? ['http://localhost:3000', 'http://localhost:3001', 'http://127.0.0.1:3000', 'http://127.0.0.1:3001']
+    : ['https://match-on.kr', 'https://www.match-on.kr'];
+  
   app.enableCors({
-    // 개발 모드에서는 모든 origin 허용, 프로덕션에서는 특정 origin만 허용
-    origin: isDevelopment ? true : (configService.get('FRONTEND_URL', 'http://localhost:3000')),
+    origin: (origin, callback) => {
+      // 개발 모드에서는 origin이 없어도 허용 (같은 도메인 요청)
+      if (isDevelopment && !origin) {
+        return callback(null, true);
+      }
+      
+      // 허용된 origin인지 확인
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('CORS 정책에 의해 차단되었습니다.'));
+      }
+    },
     credentials: true, // 쿠키 전송 허용
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   });
 

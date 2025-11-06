@@ -1,0 +1,55 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - master
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 🛎 Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: 🔑 Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERUSERNAME }}
+          password: ${{ secrets.DOCKERPASSWORD }}
+      
+      - name: 🏗 Build Docker Image
+        run: |
+          docker build -t daonyoon/opmt_backend:latest .
+      
+      - name: 📤 Push Docker Image to Docker Hub
+        run: |
+          docker push daonyoon/opmt_backend:latest
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build # 'build' 작업이 성공해야 'deploy' 실행됨
+    
+    steps:
+      - name: 🚀 Deploy to Server
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVERHOST }}
+          username: ${{ secrets.SERVERID }}
+          key: ${{ secrets.SERVERSSHKEY }}
+          port: 22
+          script: |
+            docker stop opmt_backend || true
+            docker rm opmt_backend || true
+            docker pull daonyoon/opmt_backend:latest
+            docker run -d --name opmt_backend -p 8000:8000 \
+              -e NODE_ENV=production \
+              -e AWS_CLIENT_KEY=${{ secrets.AWS_CLIENT_KEY }} \
+              -e AWS_SECRET_KEY=${{ secrets.AWS_SECRET_KEY }} \
+              -e AWS_S3_REGION=${{ secrets.AWS_S3_REGION }} \
+              -e AWS_S3_BUCKET=${{ secrets.AWS_S3_BUCKET }} \
+              daonyoon/opmt_backend:latest
+            docker image prune -f
