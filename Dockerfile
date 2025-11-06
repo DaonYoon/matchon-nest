@@ -14,4 +14,9 @@ COPY . .
 RUN npm run build
 
 EXPOSE 4003
-CMD ["npm", "start:prod"]
+
+# 환경 변수 설정 (기본값)
+ENV NODE_ENV=production
+ENV PORT=4003
+
+CMD ["npm", "run", "start:prod"]
