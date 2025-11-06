@@ -19,4 +19,5 @@ EXPOSE 4003
 ENV NODE_ENV=production
 ENV PORT=4003
 
-CMD ["npm", "run", "start:prod"]
+# Docker 컨테이너에서는 환경 변수를 직접 주입하므로 env-cmd 없이 실행
+CMD ["node", "dist/main.js"]
