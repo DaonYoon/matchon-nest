@@ -57,5 +57,9 @@ export class UpdateCompetitionDto {
   @ApiPropertyOptional({ description: '참가자 명단 표시 여부', example: true })
   @IsOptional()
   is_show_player?: boolean;
+
+  @ApiPropertyOptional({ description: '대진표 표시 여부', example: false })
+  @IsOptional()
+  is_show_bracket?: boolean;
 }
 

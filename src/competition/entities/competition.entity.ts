@@ -130,10 +130,19 @@ export class Competition extends BaseEntity {
   @Column({
     type: 'boolean',
     nullable: false,
-    default: true,
+    default: false,
     comment: '참가자 명단 표시 여부'
   })
   is_show_player: boolean;
+
+  @Column({
+    type: 'boolean',
+    nullable: false,
+    default: false,
+    comment: '대진표 표시 여부'
+  })
+  @IsOptional()
+  is_show_bracket: boolean;
 
   @Column({
     type: 'varchar',

@@ -63,7 +63,8 @@ export class CompetitionService {
         ...createDto,
         thumbnail: thumbnailUrl, // S3 URL로 저장
         status: createDto.status || CompetitionStatus.REGISTRATION,
-        is_show_player: createDto.is_show_player !== undefined ? createDto.is_show_player : true,
+        is_show_player: createDto.is_show_player !== undefined ? createDto.is_show_player : false,
+        is_show_bracket: createDto.is_show_bracket !== undefined ? createDto.is_show_bracket : false,
         secret_key: secretKey,
       });
 
@@ -315,6 +316,9 @@ export class CompetitionService {
       }
       if (updateDto.is_show_player !== undefined) {
         competition.is_show_player = updateDto.is_show_player;
+      }
+      if (updateDto.is_show_bracket !== undefined) {
+        competition.is_show_bracket = updateDto.is_show_bracket;
       }
 
       return await this.competitionRepository.save(competition);

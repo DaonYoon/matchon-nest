@@ -58,8 +58,12 @@ export class CreateCompetitionDto {
   @IsString({ message: '썸네일은 문자열이어야 합니다.' })
   thumbnail?: string;
 
-  @ApiPropertyOptional({ description: '참가자 명단 표시 여부', example: true, default: true })
+  @ApiPropertyOptional({ description: '참가자 명단 표시 여부', example: false, default: false })
   @IsOptional()
   is_show_player?: boolean;
+
+  @ApiPropertyOptional({ description: '대진표 표시 여부', example: false, default: false })
+  @IsOptional()
+  is_show_bracket?: boolean;
 }
 
