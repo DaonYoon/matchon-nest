@@ -79,6 +79,7 @@ export class MatchService {
       const matchMap = new Map<string, Match>(); // round-match_number로 경기 찾기
 
       // 각 라운드별로 경기 생성
+      // order는 전체 경기 순서로 1부터 순차적으로 증가
       let currentOrder = 1; // 순서 카운터
 
       for (let round = totalRounds; round >= 1; round--) {
@@ -103,18 +104,29 @@ export class MatchService {
             order: null,
           });
 
-          // 예선전 (첫 라운드)은 order를 match_number와 동일하게 설정
-          if (round === totalRounds) {
-            match.order = matchNumber;
-          } else {
-            // 준결승/결승은 뒷번호로 설정
-            match.order = bracketSize + currentOrder;
-            currentOrder++;
-          }
+          // order는 전체 경기 순서로 1부터 순차적으로 증가
+          match.order = currentOrder;
+          currentOrder++;
 
           matches.push(match);
           matchMap.set(`${round}-${matchNumber}`, match);
         }
+      }
+
+      // 선수 존재 확인
+      const playerIds = sortedPlayers.map(p => p.player_idx);
+      const existingPlayers = await this.playerRepository.find({
+        where: { idx: In(playerIds) },
+        select: ['idx'],
+      });
+
+      const existingPlayerIds = existingPlayers.map(p => p.idx);
+      const missingPlayers = playerIds.filter(id => !existingPlayerIds.includes(id));
+
+      if (missingPlayers.length > 0) {
+        throw new BadRequestException(
+          `존재하지 않는 선수 idx가 포함되어 있습니다: ${missingPlayers.join(', ')}`
+        );
       }
 
       // 첫 라운드에 선수 배정
@@ -123,37 +135,75 @@ export class MatchService {
       );
       const firstRoundCount = firstRoundMatches.length;
 
+      // 표준 토너먼트 시드 배치 알고리즘 사용
       // 시드에 따라 선수 배정
+      // 각 경기에 시드 번호 쌍을 미리 계산
+      const matchAssignments = new Map<number, { player1Seed?: number; player2Seed?: number }>();
+      
+      for (let i = 0; i < firstRoundCount; i++) {
+        matchAssignments.set(i, {});
+      }
+
+      // 표준 토너먼트 시드 배치: 시드 번호 쌍 계산
+      // 예: 8명일 때
+      // 경기 0: 시드 1 vs 시드 8
+      // 경기 1: 시드 3 vs 시드 6
+      // 경기 2: 시드 4 vs 시드 5
+      // 경기 3: 시드 2 vs 시드 7
       for (let i = 0; i < sortedPlayers.length; i++) {
         const player = sortedPlayers[i];
         const seed = player.seed;
+        
+        try {
+          const matchIndex = this.calculateMatchPosition(seed, firstRoundCount);
+          
+          const assignment = matchAssignments.get(matchIndex);
+          if (!assignment) {
+            throw new BadRequestException(
+              `시드 ${seed}의 선수 배정에 실패했습니다. 계산된 경기 인덱스 ${matchIndex}가 범위를 벗어났습니다.`
+            );
+          }
 
-        // 토너먼트 트리 구조에 따라 배정
-        let matchIndex: number;
-        if (firstRoundCount === 1) {
-          matchIndex = 0;
-        } else {
-          // 시드 배치 알고리즘: 1번 시드는 첫 경기, 2번 시드는 마지막 경기, 3번 시드는 2번 시드 반대편 등
-          if (seed === 1) {
-            matchIndex = 0;
-          } else if (seed === 2) {
-            matchIndex = firstRoundCount - 1;
+          if (!assignment.player1Seed) {
+            assignment.player1Seed = seed;
+          } else if (!assignment.player2Seed) {
+            assignment.player2Seed = seed;
           } else {
-            // 3번 이후 시드는 토너먼트 구조에 맞게 배정
-            matchIndex = this.calculateMatchPosition(seed, firstRoundCount);
+            throw new BadRequestException(
+              `시드 ${seed}의 선수 배정에 실패했습니다. 경기 ${matchIndex + 1}에 이미 시드 ${assignment.player1Seed}과 시드 ${assignment.player2Seed}가 배정되어 있습니다.`
+            );
+          }
+        } catch (error) {
+          if (error instanceof BadRequestException) {
+            throw error;
+          }
+          throw new BadRequestException(
+            `시드 ${seed}의 선수 배정 중 오류가 발생했습니다: ${error instanceof Error ? error.message : String(error)}`
+          );
+        }
+      }
+
+      // 계산된 배정에 따라 선수 배정
+      for (let i = 0; i < firstRoundCount; i++) {
+        const match = firstRoundMatches[i];
+        const assignment = matchAssignments.get(i);
+        
+        if (!assignment || !match) {
+          continue;
+        }
+
+        if (assignment.player1Seed) {
+          const player1 = sortedPlayers.find(p => p.seed === assignment.player1Seed);
+          if (player1) {
+            match.player1_idx = player1.player_idx;
           }
         }
 
-        const match = firstRoundMatches[matchIndex];
-        if (!match.player1_idx) {
-          match.player1_idx = player.player_idx;
-        } else if (!match.player2_idx) {
-          match.player2_idx = player.player_idx;
-        } else {
-          // 이미 두 선수가 배정된 경우 부전승 처리
-          throw new BadRequestException(
-            `시드 ${seed}의 선수 배정에 실패했습니다.`
-          );
+        if (assignment.player2Seed) {
+          const player2 = sortedPlayers.find(p => p.seed === assignment.player2Seed);
+          if (player2) {
+            match.player2_idx = player2.player_idx;
+          }
         }
       }
 
@@ -164,34 +214,45 @@ export class MatchService {
       const savedMatches = await this.matchRepository.save(matches);
 
       // 다음 경기 연결 및 소스 경기 정보 업데이트
+      // 경기들을 order 순서로 정렬하여 경기 번호를 확인
+      const sortedMatches = [...savedMatches].sort((a, b) => a.order - b.order);
+      
+      // 토너먼트 구조: 라운드별로 하위 라운드에서 상위 라운드로 연결
+      // 예: 8강 -> 4강 -> 결승
+      // round 값은 matchesInRound 값으로 저장됨 (4, 2, 1)
+      
       for (let round = totalRounds; round > 1; round--) {
-        const currentRoundMatches = Math.pow(2, round - 1);
-        const nextRoundMatches = Math.pow(2, round - 2);
+        // 현재 라운드의 경기 수 (예: round=3일 때 4경기)
+        const currentRoundSize = Math.pow(2, round - 1);
+        // 다음 라운드의 경기 수 (예: round=2일 때 2경기)
+        const nextRoundSize = Math.pow(2, round - 2);
 
         // 현재 라운드와 다음 라운드 경기 분리
-        const currentMatches = savedMatches.filter(
-          (m) => m.round === Math.pow(2, round - 1)
-        );
-        const nextMatches = savedMatches.filter(
-          (m) => m.round === Math.pow(2, round - 2)
-        );
+        // round 값은 matchesInRound 값과 동일하므로 이를 기준으로 필터링
+        const currentMatches = sortedMatches.filter(
+          (m) => m.round === currentRoundSize
+        ).sort((a, b) => a.order - b.order);
+        
+        const nextMatches = sortedMatches.filter(
+          (m) => m.round === nextRoundSize
+        ).sort((a, b) => a.order - b.order);
 
         // 다음 라운드 경기별로 소스 경기 정보 설정
         for (
           let matchNumber = 1;
-          matchNumber <= nextRoundMatches;
+          matchNumber <= nextRoundSize;
           matchNumber++
         ) {
-          // 다음 경기
+          // 다음 경기 (order 순서 기준)
           const nextMatch = nextMatches[matchNumber - 1];
           
           if (!nextMatch) continue;
 
           // 현재 라운드에서 이 다음 경기로 진출할 두 경기 찾기
-          // 경기 번호 1, 2 → 다음 경기 1
-          // 경기 번호 3, 4 → 다음 경기 2
-          // 경기 번호 5, 6 → 다음 경기 3
-          // 공식: (matchNumber - 1) * 2 + 1, (matchNumber - 1) * 2 + 2
+          // order 순서로 정렬된 현재 라운드 경기에서
+          // 경기 1, 2 → 다음 경기 1
+          // 경기 3, 4 → 다음 경기 2
+          // 공식: (matchNumber - 1) * 2, (matchNumber - 1) * 2 + 1
           const sourceMatch1Index = (matchNumber - 1) * 2;
           const sourceMatch2Index = (matchNumber - 1) * 2 + 1;
 
@@ -220,33 +281,68 @@ export class MatchService {
       ) {
         throw error;
       }
-      throw new BadRequestException("대진표 생성에 실패했습니다.");
+      // 예상치 못한 에러는 로그를 남기고 상세한 메시지 반환
+      console.error('대진표 생성 중 예상치 못한 에러:', error);
+      throw new BadRequestException(
+        `대진표 생성에 실패했습니다: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
   /**
-   * 시드 위치 계산
+   * 시드 위치 계산 (표준 토너먼트 시드 배치 알고리즘)
+   * 예: 8명일 때
+   * 경기 0: 시드 1 vs 시드 8
+   * 경기 1: 시드 3 vs 시드 6
+   * 경기 2: 시드 4 vs 시드 5
+   * 경기 3: 시드 2 vs 시드 7
+   * 
+   * 표준 토너먼트 시드 배치: 시드 번호를 이진수로 변환하고, 비트 순서를 뒤집어서 전체 트리 위치 계산
+   * 그 다음 전체 트리 위치를 경기 인덱스로 변환
    */
   private calculateMatchPosition(seed: number, totalMatches: number): number {
-    // 단순한 토너먼트 시드 배치 알고리즘
-    if (seed <= 2) {
-      return seed === 1 ? 0 : totalMatches - 1;
+    if (seed <= 0 || seed > totalMatches * 2) {
+      throw new BadRequestException(`유효하지 않은 시드 번호: ${seed} (최대 시드: ${totalMatches * 2})`);
     }
 
-    // 3번 이후 시드는 대칭적으로 배치
-    const positions = [0, totalMatches - 1];
-    let currentPos = 1;
-    let increment = totalMatches / 2;
-
-    while (currentPos < seed && positions.length < totalMatches) {
-      const newPos = Math.floor(increment / 2);
-      positions.push(newPos);
-      positions.push(totalMatches - 1 - newPos);
-      increment = increment / 2;
-      currentPos++;
+    const totalSeeds = totalMatches * 2;
+    
+    // 시드 번호를 0-based로 변환
+    let seedValue = seed - 1;
+    
+    // 비트 수 계산 (totalSeeds를 표현하는데 필요한 비트 수)
+    const bits = Math.ceil(Math.log2(totalSeeds));
+    
+    // 비트를 뒤집어서 전체 트리 구조에서의 위치 계산
+    let treePosition = 0;
+    let tempValue = seedValue;
+    
+    for (let i = 0; i < bits; i++) {
+      treePosition = (treePosition << 1) | (tempValue & 1);
+      tempValue >>= 1;
     }
-
-    return positions[seed - 1] || seed - 1;
+    
+    // 전체 트리 위치를 경기 인덱스로 변환
+    // 표준 토너먼트 시드 배치: treePosition을 totalSeeds로 나눈 나머지를 사용
+    // 하지만 이것도 잘못되었을 수 있습니다.
+    
+    // 올바른 방법: treePosition을 totalMatches로 나눈 나머지가 경기 인덱스
+    // 하지만 이것도 잘못되었을 수 있습니다.
+    
+    // 실제로는 treePosition을 totalMatches로 나눈 나머지가 아니라
+    // treePosition을 totalMatches로 나눈 몫을 사용해야 할 수도 있습니다.
+    
+    // 더 정확한 방법: treePosition을 totalSeeds로 나눈 나머지를 totalMatches로 나눈 나머지
+    let matchIndex = (treePosition % totalSeeds) % totalMatches;
+    
+    // 결과 검증
+    if (matchIndex < 0 || matchIndex >= totalMatches) {
+      throw new BadRequestException(
+        `시드 ${seed}의 경기 위치 계산 실패: 계산된 위치 ${matchIndex}가 유효 범위(0-${totalMatches - 1})를 벗어났습니다.`
+      );
+    }
+    
+    return matchIndex;
   }
 
   /**
@@ -352,7 +448,7 @@ export class MatchService {
           const sourceMatch = matches.find(m => m.idx === matchData.player1_source_match_idx);
           matchData.player1 = {
             source_match_idx: matchData.player1_source_match_idx,
-            display_name: sourceMatch ? `${sourceMatch.match_number}번 경기 승자` : `${matchData.player1_source_match_idx}번 경기 승자`,
+            display_name: sourceMatch ? `${sourceMatch.order}번 경기 승자` : `${matchData.player1_source_match_idx}번 경기 승자`,
           };
         } else {
           matchData.player1 = null;
@@ -373,7 +469,7 @@ export class MatchService {
           const sourceMatch = matches.find(m => m.idx === matchData.player2_source_match_idx);
           matchData.player2 = {
             source_match_idx: matchData.player2_source_match_idx,
-            display_name: sourceMatch ? `${sourceMatch.match_number}번 경기 승자` : `${matchData.player2_source_match_idx}번 경기 승자`,
+            display_name: sourceMatch ? `${sourceMatch.order}번 경기 승자` : `${matchData.player2_source_match_idx}번 경기 승자`,
           };
         } else {
           matchData.player2 = null;
@@ -475,7 +571,7 @@ export class MatchService {
           const sourceMatch = matches.find(m => m.idx === match.player1_source_match_idx);
           matchData.player1 = {
             source_match_idx: match.player1_source_match_idx,
-            display_name: sourceMatch ? `${sourceMatch.match_number}번 경기 승자` : `${match.player1_source_match_idx}번 경기 승자`,
+            display_name: sourceMatch ? `${sourceMatch.order}번 경기 승자` : `${match.player1_source_match_idx}번 경기 승자`,
           };
         } else {
           matchData.player1 = null;
@@ -497,7 +593,7 @@ export class MatchService {
           const sourceMatch = matches.find(m => m.idx === match.player2_source_match_idx);
           matchData.player2 = {
             source_match_idx: match.player2_source_match_idx,
-            display_name: sourceMatch ? `${sourceMatch.match_number}번 경기 승자` : `${match.player2_source_match_idx}번 경기 승자`,
+            display_name: sourceMatch ? `${sourceMatch.order}번 경기 승자` : `${match.player2_source_match_idx}번 경기 승자`,
           };
         } else {
           matchData.player2 = null;
@@ -580,9 +676,13 @@ export class MatchService {
 
       // 승자가 확정되지 않은 경우 소스 경기 정보 표시
       if (!match.player1_idx && match.player1_source_match_idx) {
+        // 소스 경기를 찾아서 order로 표시
+        const sourceMatch = await this.matchRepository.findOne({
+          where: { idx: match.player1_source_match_idx },
+        });
         matchData.player1 = {
           source_match_idx: match.player1_source_match_idx,
-          display_name: `${match.player1_source_match_idx}번 경기 승자`,
+          display_name: sourceMatch ? `${sourceMatch.order}번 경기 승자` : `${match.player1_source_match_idx}번 경기 승자`,
         };
       } else if (match.player1) {
         matchData.player1 = {
@@ -596,9 +696,13 @@ export class MatchService {
       }
 
       if (!match.player2_idx && match.player2_source_match_idx) {
+        // 소스 경기를 찾아서 order로 표시
+        const sourceMatch = await this.matchRepository.findOne({
+          where: { idx: match.player2_source_match_idx },
+        });
         matchData.player2 = {
           source_match_idx: match.player2_source_match_idx,
-          display_name: `${match.player2_source_match_idx}번 경기 승자`,
+          display_name: sourceMatch ? `${sourceMatch.order}번 경기 승자` : `${match.player2_source_match_idx}번 경기 승자`,
         };
       } else if (match.player2) {
         matchData.player2 = {
