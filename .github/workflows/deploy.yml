@@ -23,11 +23,11 @@ jobs:
       
       - name: 🏗 Build Docker Image
         run: |
-          docker build -t daonyoon/opmt_backend:latest .
+          docker build -t daonyoon/match_on_nest:latest .
       
       - name: 📤 Push Docker Image to Docker Hub
         run: |
-          docker push daonyoon/opmt_backend:latest
+          docker push daonyoon/match_on_nest:latest
 
   deploy:
     runs-on: ubuntu-latest
@@ -42,14 +42,14 @@ jobs:
           key: ${{ secrets.SERVERSSHKEY }}
           port: 22
           script: |
-            docker stop opmt_backend || true
-            docker rm opmt_backend || true
-            docker pull daonyoon/opmt_backend:latest
-            docker run -d --name opmt_backend -p 8000:8000 \
+            docker stop match_on_nest || true
+            docker rm match_on_nest || true
+            docker pull daonyoon/match_on_nest:latest
+            docker run -d --name match_on_nest -p 8000:8000 \
               -e NODE_ENV=production \
               -e AWS_CLIENT_KEY=${{ secrets.AWS_CLIENT_KEY }} \
               -e AWS_SECRET_KEY=${{ secrets.AWS_SECRET_KEY }} \
               -e AWS_S3_REGION=${{ secrets.AWS_S3_REGION }} \
               -e AWS_S3_BUCKET=${{ secrets.AWS_S3_BUCKET }} \
-              daonyoon/opmt_backend:latest
+              daonyoon/match_on_nest:latest
             docker image prune -f
