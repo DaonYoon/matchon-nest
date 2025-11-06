@@ -90,7 +90,7 @@ async function bootstrap() {
   });
 
   // 포트 설정 (.env.local에서 읽어옴)
-  const port = configService.get('PORT', 4002);
+  const port = configService.get('PORT', 4003);
   
   // 개발 모드에서는 모든 네트워크 인터페이스에 바인딩
   if (isDevelopment) {
