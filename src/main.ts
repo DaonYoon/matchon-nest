@@ -26,11 +26,15 @@ async function bootstrap() {
     }),
   );
 
-  // API 기본 경로 설정
-  app.setGlobalPrefix('api');
-
   // 환경 체크 (개발/프로덕션)
   const isDevelopment = configService.get('NODE_ENV', 'development') !== 'production';
+  
+  // API 기본 경로 설정
+  // 개발 환경: /api prefix 사용
+  // 프로덕션 환경: prefix 없음 (nginx에서 처리)
+  if (isDevelopment) {
+    app.setGlobalPrefix('api');
+  }
   
   // CORS 설정
   // 개발 모드: localhost만 허용
