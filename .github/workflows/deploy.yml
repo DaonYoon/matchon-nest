@@ -2,54 +2,71 @@ name: Deploy
 
 on:
   push:
-    branches:
-      - master
-      - main
+    branches: [ master, main ]
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    
     steps:
-      - name: 🛎 Checkout repository
+      - name: 🛎 Checkout
         uses: actions/checkout@v4
-      
-      - name: 🔑 Log in to Docker Hub
+
+      - name: 🔑 Docker Hub login
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERUSERNAME }}
           password: ${{ secrets.DOCKERPASSWORD }}
-      
-      - name: 🏗 Build Docker Image
+
+      - name: 🏷️ Set tags
+        id: vars
         run: |
-          docker build -t daonyoon/match_on_nest:latest .
-      
-      - name: 📤 Push Docker Image to Docker Hub
+          echo "sha_tag=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+
+      - name: 🏗 Build
+        run: |
+          docker build -t daonyoon/match_on_nest:latest \
+                       -t daonyoon/match_on_nest:${{ steps.vars.outputs.sha_tag }} .
+
+      - name: 📤 Push
         run: |
           docker push daonyoon/match_on_nest:latest
+          docker push daonyoon/match_on_nest:${{ steps.vars.outputs.sha_tag }}
 
   deploy:
     runs-on: ubuntu-latest
-    needs: build # 'build' 작업이 성공해야 'deploy' 실행됨
-    
+    needs: build
     steps:
-      - name: 🚀 Deploy to Server
-        uses: appleboy/ssh-action@master
+      - name: 🚀 Deploy
+        uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVERHOST }}
           username: ${{ secrets.SERVERID }}
           key: ${{ secrets.SERVERSSHKEY }}
           port: 22
+          script_stop: true
           script: |
-            docker stop match_on_nest || true
-            docker rm match_on_nest || true
+            set -eo pipefail
+
+            echo "🔑 Docker Hub login on server"
+            echo '${{ secrets.DOCKERPASSWORD }}' | docker login -u '${{ secrets.DOCKERUSERNAME }}' --password-stdin
+
+            echo "🐳 Pull image"
             docker pull daonyoon/match_on_nest:latest
-            docker run -d --name match_on_nest -p 4003:4003 \
+
+            echo "🧹 Stop & remove old container"
+            docker rm -f match_on_nest || true
+
+            echo "🚀 Run new container"
+            docker run -d --name match_on_nest \
+              -p 4003:4003 \
+              --restart=always \
               -e NODE_ENV=production \
-              -e AWS_CLIENT_KEY=${{ secrets.AWS_CLIENT_KEY }} \
-              -e AWS_SECRET_KEY=${{ secrets.AWS_SECRET_KEY }} \
-              -e AWS_S3_REGION=${{ secrets.AWS_S3_REGION }} \
-              -e AWS_S3_BUCKET=${{ secrets.AWS_S3_BUCKET }} \
+              -e AWS_CLIENT_KEY='${{ secrets.AWS_CLIENT_KEY }}' \
+              -e AWS_SECRET_KEY='${{ secrets.AWS_SECRET_KEY }}' \
+              -e AWS_S3_REGION='${{ secrets.AWS_S3_REGION }}' \
+              -e AWS_S3_BUCKET='${{ secrets.AWS_S3_BUCKET }}' \
               daonyoon/match_on_nest:latest
+
+            echo "🧽 Prune dangling images"
             docker image prune -f
