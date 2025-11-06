@@ -13,6 +13,12 @@ async function bootstrap() {
   
   // ConfigService를 통해 환경 변수 접근
   const configService = app.get(ConfigService);
+  
+  // DB 모델 자동 동기화 설정 확인
+  const synchronize = configService.get('DB_SYNC') === 'false' || configService.get('DB_SYNC') === false ? false : true;
+  if (synchronize) {
+    console.log('✅ DB 모델 자동 동기화 활성화됨 (테이블이 없으면 자동 생성)');
+  }
 
   // 전역 유효성 검사 파이프 설정
   app.useGlobalPipes(
@@ -40,7 +46,7 @@ async function bootstrap() {
   // 개발 모드: localhost만 허용
   // 프로덕션: https://match-on.kr에서의 요청만 허용
   const allowedOrigins = isDevelopment 
-    ? ['http://localhost:3000', 'http://localhost:3001', 'http://127.0.0.1:3000', 'http://127.0.0.1:3001']
+    ? ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3003', 'http://127.0.0.1:3000', 'http://127.0.0.1:3001', 'http://127.0.0.1:3003']
     : ['https://match-on.kr', 'https://www.match-on.kr'];
   
   app.enableCors({

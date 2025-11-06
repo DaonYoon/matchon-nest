@@ -130,7 +130,7 @@ export class CompetitionController {
       const finalOffset = offsetNum < 0 ? 0 : offsetNum;
       
       const competitions = await this.competitionService.findAllPublic(finalOffset, finalLimit);
-      sendSuccess(res, '대회 목록을 조회했습니다.', { data: competitions });
+      sendSuccess(res, '대회 목록을 조회했습니다.',   competitions );
     } catch (error: any) {
       const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
       sendError(res, error.message || '대회 목록 조회 중 오류가 발생했습니다.', status);

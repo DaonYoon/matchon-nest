@@ -20,8 +20,12 @@ export const createDatabaseConfig = (configService: ConfigService): TypeOrmModul
   database: configService.get('DB_DATABASE', 'myplace_db'),
   entities: [User, Competition, Mat, Group, Player, Match],
   // DB 모델 자동 동기화 설정
-  // 환경 변수 DB_SYNC가 있으면 그 값을 사용하고, 없으면 프로덕션에서는 false, 개발에서는 true
-  synchronize: configService.get('DB_SYNC') === 'true' || configService.get('DB_SYNC') === true || (configService.get('DB_SYNC') === undefined && configService.get('NODE_ENV') !== 'production'),
+  // 환경 변수 DB_SYNC가 있으면 그 값을 사용하고, 없으면 모든 환경에서 true (자동 업데이트)
+  synchronize: configService.get('DB_SYNC') === 'false' || configService.get('DB_SYNC') === false ? false : true,
+  // 마이그레이션 자동 실행 비활성화 (synchronize와 함께 사용)
+  migrationsRun: false,
+  // 엔티티 자동 로드 비활성화 (명시적으로 entities 배열에 등록)
+  autoLoadEntities: false,
   logging: false, // DB 쿼리 로그 비활성화
   timezone: '+09:00',
   charset: 'utf8mb4',
