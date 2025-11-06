@@ -82,5 +82,10 @@ export class UpdateMatchDto {
   @IsOptional()
   @IsNumber({}, { message: 'player2 소스 경기 idx는 숫자여야 합니다.' })
   player2_source_match_idx?: number;
+
+  @ApiPropertyOptional({ description: '경기 시간 (초 단위)', example: 240 })
+  @IsOptional()
+  @IsNumber({}, { message: '경기 시간은 숫자여야 합니다.' })
+  time?: number;
 }
 

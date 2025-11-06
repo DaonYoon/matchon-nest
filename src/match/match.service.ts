@@ -102,6 +102,7 @@ export class MatchService {
             score_player1: null,
             score_player2: null,
             order: null,
+            time: group.match_time ? group.match_time * 60 : null, // 그룹의 경기 시간을 초 단위로 변환하여 기본값 설정
           });
 
           // order는 전체 경기 순서로 1부터 순차적으로 증가
@@ -417,6 +418,7 @@ export class MatchService {
         advantage_player2: match.advantage_player2,
         penalty_player1: match.penalty_player1,
         penalty_player2: match.penalty_player2,
+        time: match.time,
         player1_source_match_idx: match.player1_source_match_idx,
         player2_source_match_idx: match.player2_source_match_idx,
         // 그룹 정보 포함
@@ -542,6 +544,7 @@ export class MatchService {
           advantage_player2: match.advantage_player2,
           penalty_player1: match.penalty_player1,
           penalty_player2: match.penalty_player2,
+          time: match.time,
           player1_source_match_idx: match.player1_source_match_idx,
           player2_source_match_idx: match.player2_source_match_idx,
           // 그룹 정보 (경기 시간 포함)
@@ -650,13 +653,14 @@ export class MatchService {
         score_player2: match.score_player2,
         order: match.order,
         result: match.result,
-        advantage_player1: match.advantage_player1,
-        advantage_player2: match.advantage_player2,
-        penalty_player1: match.penalty_player1,
-        penalty_player2: match.penalty_player2,
-        player1_source_match_idx: match.player1_source_match_idx,
-        player2_source_match_idx: match.player2_source_match_idx,
-        group: match.group
+          advantage_player1: match.advantage_player1,
+          advantage_player2: match.advantage_player2,
+          penalty_player1: match.penalty_player1,
+          penalty_player2: match.penalty_player2,
+          time: match.time,
+          player1_source_match_idx: match.player1_source_match_idx,
+          player2_source_match_idx: match.player2_source_match_idx,
+          group: match.group
           ? {
               idx: match.group.idx,
               name: match.group.name,
@@ -951,6 +955,9 @@ export class MatchService {
       }
       if (updateDto.penalty_player2 !== undefined) {
         match.penalty_player2 = updateDto.penalty_player2;
+      }
+      if (updateDto.time !== undefined) {
+        match.time = updateDto.time;
       }
 
       const savedMatch = await this.matchRepository.save(match);

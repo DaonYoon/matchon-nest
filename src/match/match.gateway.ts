@@ -112,6 +112,61 @@ export class MatchGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   /**
+   * 경기 시간 업데이트
+   * adminSocket에서 time 이벤트로 받은 경기 시간을 업데이트하고 그대로 브로드캐스트
+   */
+  @SubscribeMessage('time')
+  async handleTimeUpdate(
+    @MessageBody() data: { matchIdx: number; remaining_time: number },
+    @ConnectedSocket() client: Socket,
+  ) {
+    try {
+      const { matchIdx, remaining_time } = data;
+
+      if (!matchIdx || remaining_time === undefined) {
+        client.emit('error', {
+          message: '경기 ID와 남은 시간이 필요합니다.',
+        });
+        return;
+      }
+
+      // 경기 정보 조회
+      const match = await this.matchService.findOne(matchIdx);
+      if (!match || !match.group) {
+        client.emit('error', {
+          message: '경기 정보를 찾을 수 없습니다.',
+        });
+        return;
+      }
+
+      // 경기 시간 업데이트
+      await this.matchService.update(matchIdx, { time: remaining_time }, this);
+
+      // 해당 매트를 구독하는 모든 클라이언트에게 time 이벤트로 그대로 브로드캐스트
+      const roomName = `competition:${match.group.competition_idx}:mat:${match.group.mat_idx}`;
+      this.server.to(roomName).emit('time', {
+        matchIdx,
+        remaining_time,
+      });
+
+      // 경기 목록도 업데이트하여 브로드캐스트
+      await this.broadcastMatchesUpdate(
+        match.group.competition_idx,
+        match.group.mat_idx,
+      );
+
+      this.logger.log(
+        `경기 ${matchIdx} 시간 업데이트: ${remaining_time}초`,
+      );
+    } catch (error: any) {
+      this.logger.error(`경기 시간 업데이트 오류: ${error.message}`, error.stack);
+      client.emit('error', {
+        message: error.message || '경기 시간 업데이트 중 오류가 발생했습니다.',
+      });
+    }
+  }
+
+  /**
    * 특정 매트의 경기 정보를 모든 구독자에게 브로드캐스트
    * @param competitionIdx 대회 ID
    * @param matIdx 매트 ID

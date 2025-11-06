@@ -203,6 +203,15 @@ export class Match extends BaseEntity {
   @IsNumber({}, { message: '선수2 패널티는 숫자여야 합니다.' })
   penalty_player2: number | null;
 
+  @Column({
+    type: 'int',
+    nullable: true,
+    comment: '경기 시간 (초 단위)'
+  })
+  @IsOptional()
+  @IsNumber({}, { message: '경기 시간은 숫자여야 합니다.' })
+  time: number | null;
+
   // 관계 설정
   @ManyToOne(() => Group, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'group_idx', referencedColumnName: 'idx' })
