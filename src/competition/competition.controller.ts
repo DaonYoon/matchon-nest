@@ -121,12 +121,16 @@ export class CompetitionController {
     @Query('limit') limit?: string
   ): Promise<void> {
     try {
-
-
-      const offsetNum = offset ? parseInt(offset, 10) : 0;
-      const limitNum = limit ? parseInt(limit, 10) : 20;
-      const competitions = await this.competitionService.findAllPublic(offsetNum, limitNum);
-      sendSuccess(res, '대회 목록을 조회했습니다.',  competitions );
+      // 쿼리 파라미터 파싱 (NaN 체크 포함)
+      const offsetNum = offset && !isNaN(parseInt(offset, 10)) ? parseInt(offset, 10) : 0;
+      const limitNum = limit && !isNaN(parseInt(limit, 10)) ? parseInt(limit, 10) : 20;
+      
+      // limit 최대값 제한 (보안)
+      const finalLimit = limitNum > 100 ? 100 : limitNum;
+      const finalOffset = offsetNum < 0 ? 0 : offsetNum;
+      
+      const competitions = await this.competitionService.findAllPublic(finalOffset, finalLimit);
+      sendSuccess(res, '대회 목록을 조회했습니다.', { data: competitions });
     } catch (error: any) {
       const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
       sendError(res, error.message || '대회 목록 조회 중 오류가 발생했습니다.', status);

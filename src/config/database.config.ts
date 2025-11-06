@@ -19,7 +19,9 @@ export const createDatabaseConfig = (configService: ConfigService): TypeOrmModul
   password: configService.get('DB_PASSWORD', ''),
   database: configService.get('DB_DATABASE', 'myplace_db'),
   entities: [User, Competition, Mat, Group, Player, Match],
-  synchronize: configService.get('NODE_ENV') !== 'production',
+  // DB 모델 자동 동기화 설정
+  // 환경 변수 DB_SYNC가 있으면 그 값을 사용하고, 없으면 프로덕션에서는 false, 개발에서는 true
+  synchronize: configService.get('DB_SYNC') === 'true' || configService.get('DB_SYNC') === true || (configService.get('DB_SYNC') === undefined && configService.get('NODE_ENV') !== 'production'),
   logging: false, // DB 쿼리 로그 비활성화
   timezone: '+09:00',
   charset: 'utf8mb4',
