@@ -11,7 +11,7 @@ build/
 # Environment variables
 .env
 .env.local
-.env.prod
+# .env.prod는 Docker 이미지에 포함 (프로덕션 환경 변수)
 .env.development.local
 .env.test.local
 .env.production.local

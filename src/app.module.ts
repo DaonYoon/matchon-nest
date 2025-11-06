@@ -24,9 +24,10 @@ import { LoggingMiddleware } from '@/common/middleware/logging.middleware';
     // 시스템 환경 변수가 .env 파일보다 우선순위가 높음
     ConfigModule.forRoot({
       isGlobal: true,
-      // env-cmd를 사용하면 환경 변수를 로드하므로 .env 파일 무시
-      // GitHub Actions에서는 시스템 환경 변수로 주입되므로 자동으로 읽힘
-      ignoreEnvFile: true,
+      // Docker 컨테이너에서는 .env.prod 파일을 읽고, 환경 변수도 우선순위가 높음
+      // 환경 변수가 있으면 환경 변수를 사용하고, 없으면 .env.prod 파일을 읽음
+      ignoreEnvFile: false,
+      envFilePath: ['.env.prod', '.env.local', '.env'],
     }),
     
     // 데이터베이스 연결

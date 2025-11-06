@@ -62,6 +62,7 @@ jobs:
               -p 4003:4003 \
               -e NODE_ENV=production \
               -e PORT=4003 \
+              -e JWT_SECRET='${{ secrets.JWT_SECRET }}' \
               -e AWS_CLIENT_KEY='${{ secrets.AWS_CLIENT_KEY }}' \
               -e AWS_SECRET_KEY='${{ secrets.AWS_SECRET_KEY }}' \
               -e AWS_S3_REGION='${{ secrets.AWS_S3_REGION }}' \
