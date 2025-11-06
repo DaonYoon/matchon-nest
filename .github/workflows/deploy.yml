@@ -45,7 +45,7 @@ jobs:
             docker stop match_on_nest || true
             docker rm match_on_nest || true
             docker pull daonyoon/match_on_nest:latest
-            docker run -d --name match_on_nest -p 8000:8000 \
+            docker run -d --name match_on_nest -p 4003:4003 \
               -e NODE_ENV=production \
               -e AWS_CLIENT_KEY=${{ secrets.AWS_CLIENT_KEY }} \
               -e AWS_SECRET_KEY=${{ secrets.AWS_SECRET_KEY }} \
