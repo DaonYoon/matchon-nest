@@ -28,6 +28,8 @@ async function createLargeTestData() {
     await dataSource.initialize();
     console.log('✅ 데이터베이스 연결 성공');
 
+    const TEST_COMPETITION_NUMBER = +process.env.TEST_COMPETITION_NUMBER
+
     const competitionRepository = dataSource.getRepository(Competition);
     const matRepository = dataSource.getRepository(Mat);
     const groupRepository = dataSource.getRepository(Group);
@@ -35,11 +37,11 @@ async function createLargeTestData() {
 
     // 대회 확인
     const competition = await competitionRepository.findOne({
-      where: { idx: 2 },
+      where: { idx: TEST_COMPETITION_NUMBER },
     });
 
     if (!competition) {
-      console.error('❌ 대회 idx 2를 찾을 수 없습니다.');
+      console.error('❌ 대회 idx pro를 찾을 수 없습니다.');
       process.exit(1);
     }
 
@@ -55,7 +57,7 @@ async function createLargeTestData() {
         name: matName,
         desc: `매트 ${matName}`,
         status: MatStatus.ACTIVE,
-        competition_idx: 2,
+        competition_idx: TEST_COMPETITION_NUMBER,
       });
       const savedMat = await matRepository.save(mat);
       mats.push(savedMat);
@@ -189,7 +191,7 @@ async function createLargeTestData() {
         // 그룹 생성
         const group = groupRepository.create({
           name: groupName,
-          competition_idx: 2,
+          competition_idx: TEST_COMPETITION_NUMBER,
           mat_idx: assignedMat.idx,
           match_time: matchTime,
         });
@@ -212,7 +214,7 @@ async function createLargeTestData() {
           const player = playerRepository.create({
             name,
             team_name: teamName,
-            competition_idx: 2,
+            competition_idx: TEST_COMPETITION_NUMBER,
             group_idx: savedGroup.idx,
             phone,
             is_paid: isPaid,

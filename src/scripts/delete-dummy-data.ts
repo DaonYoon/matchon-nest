@@ -10,7 +10,7 @@ import * as readline from 'readline';
 
 /**
  * 더미 데이터 삭제 스크립트
- * competition_idx = 2인 대회의 모든 경기, 선수, 그룹 삭제
+ * competition_idx = 3인 대회의 모든 경기, 선수, 그룹 삭제
  */
 async function deleteDummyData() {
   // 환경 변수 로드
@@ -31,7 +31,7 @@ async function deleteDummyData() {
     });
 
     const answer = await new Promise<string>((resolve) => {
-      rl.question('대회 idx 2의 모든 경기, 선수, 그룹을 삭제하시겠습니까? (yes/no): ', resolve);
+      rl.question('대회 idx 3의 모든 경기, 선수, 그룹을 삭제하시겠습니까? (yes/no): ', resolve);
     });
 
     rl.close();
@@ -47,7 +47,7 @@ async function deleteDummyData() {
 
     // competition_idx = 2인 그룹들 조회
     const groups = await groupRepository.find({
-      where: { competition_idx: 2 },
+      where: { competition_idx: 3 },
       select: ['idx'],
     });
 
@@ -69,7 +69,7 @@ async function deleteDummyData() {
 
     // competition_idx = 2인 선수 삭제
     const playerCount = await playerRepository.count({
-      where: { competition_idx: 2 },
+      where: { competition_idx: 3 },
     });
 
     await playerRepository.delete({
@@ -81,7 +81,7 @@ async function deleteDummyData() {
     // competition_idx = 2인 그룹 삭제
     const groupCount = groups.length;
     await groupRepository.delete({
-      competition_idx: 2,
+      competition_idx: 3,
     });
 
     console.log(`그룹 삭제 완료 (${groupCount}개)`);

@@ -73,7 +73,7 @@ async function createDummyData() {
       // 그룹 생성
       const group = groupRepository.create({
         name: groupName,
-        competition_idx: 2,
+        competition_idx: 3,
         mat_idx: null,
       });
 
@@ -93,7 +93,7 @@ async function createDummyData() {
         const player = playerRepository.create({
           name,
           team_name: teamName,
-          competition_idx: 2,
+          competition_idx: 3,
           group_idx: savedGroup.idx,
           phone,
           is_paid: isPaid,

@@ -197,6 +197,40 @@ export class CompetitionController {
   }
 
   /**
+   * 내 대회 목록 조회 (토큰 기반)
+   */
+  @Get("my")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth("JWT-auth")
+  @ApiOperation({
+    summary: "내 대회 목록 조회",
+    description: "인증된 사용자의 토큰 정보를 활용하여 자신이 주최한 대회 목록을 반환합니다.",
+  })
+  @ApiResponse({ status: 200, description: "내 대회 목록 조회 성공" })
+  @ApiResponse({ status: 401, type: ErrorResponseDto })
+  async findMyCompetitions(@Req() req: Request, @Res() res: Response): Promise<void> {
+    try {
+      const tokenPayload = (req as any).user;
+      const userId = tokenPayload?.sub;
+
+      if (!userId) {
+        sendError(res, "인증 정보가 올바르지 않습니다.", HttpStatus.UNAUTHORIZED);
+        return;
+      }
+
+      const competitions = await this.competitionService.findByMaster(userId, userId);
+      sendSuccess(res, "내 대회 목록을 조회했습니다.",  competitions );
+    } catch (error: any) {
+      const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
+      sendError(
+        res,
+        error.message || "내 대회 목록 조회 중 오류가 발생했습니다.",
+        status
+      );
+    }
+  }
+
+  /**
    * 비밀키 확인
    */
   @Post("check-code/:competitionIdx")
