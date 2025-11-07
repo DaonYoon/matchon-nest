@@ -34,6 +34,20 @@ export class CompetitionService {
     private authService: AuthService,
   ) {}
 
+  private readonly competitionThumbnailBasePath = 'contest_thumbnail';
+
+  /**
+   * 대회 썸네일 기본 저장 경로 생성
+   * @param masterIdx 주최자 식별자 (옵션)
+   * @returns `contest_thumbnail/{masterIdx}` 또는 기본 경로
+   */
+  private buildThumbnailFolderPath(masterIdx?: number | null): string {
+    if (masterIdx && masterIdx > 0) {
+      return `${this.competitionThumbnailBasePath}/${masterIdx}`;
+    }
+    return this.competitionThumbnailBasePath;
+  }
+
   /**
    * 대회 생성
    */
@@ -53,9 +67,9 @@ export class CompetitionService {
 
       let thumbnailUrl: string | null = createDto.thumbnail || null;
 
-      // 썸네일 파일이 있으면 S3에 업로드 (master_idx 폴더에 업로드)
+      // 썸네일 파일이 있으면 S3에 업로드 (contest_thumbnail/ 경로 내에 저장)
       if (thumbnailFile) {
-        const folderPath = `contest_thumbnail/${createDto.master_idx}`;
+        const folderPath = this.buildThumbnailFolderPath(createDto.master_idx);
         thumbnailUrl = await this.s3Service.uploadFile(thumbnailFile, folderPath);
       }
 
@@ -281,7 +295,7 @@ export class CompetitionService {
 
       // 썸네일 파일이 있으면 S3에 업로드하고 URL로 저장
       if (thumbnailFile) {
-        const folderPath = `contest_thumbnail/${idx}`;
+        const folderPath = this.buildThumbnailFolderPath(competition.master_idx);
         const thumbnailUrl = await this.s3Service.uploadFile(thumbnailFile, folderPath);
         competition.thumbnail = thumbnailUrl; // S3 URL로 저장
       } else if (updateDto.thumbnail !== undefined) {

@@ -1,74 +1,86 @@
-import { IsNotEmpty, IsString, IsEnum, IsOptional, Matches } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { CompetitionStatus } from '../entities/competition.entity';
+// create-competition.dto.ts
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import {
+  IsBoolean,
+  IsDateString,
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  Min,
+} from "class-validator";
+import { CompetitionStatus } from "../entities/competition.entity";
 
-/**
- * 대회 생성 DTO
- */
 export class CreateCompetitionDto {
-  @ApiProperty({ description: '대회명', example: '2024 전국 유도 선수권대회' })
-  @IsNotEmpty({ message: '대회명은 필수입니다.' })
-  @IsString({ message: '대회명은 문자열이어야 합니다.' })
-  name: string;
+  @ApiProperty({ example: "2025 부산오픈 주짓수 챔피언십" })
+  @IsString()
+  name!: string;
 
-  @ApiPropertyOptional({ description: '대회 설명', example: '2024년 전국 유도 선수권대회입니다.\n수많은 유도인의 참여를 기다립니다.' })
+  @ApiPropertyOptional({ example: "부산 지역 커뮤니티 중심 대회 소개문..." })
   @IsOptional()
-  @IsString({ message: '대회 설명은 문자열이어야 합니다.' })
+  @IsString()
   description?: string;
 
-  @ApiProperty({ description: '지역', example: '서울' })
-  @IsNotEmpty({ message: '지역은 필수입니다.' })
-  @IsString({ message: '지역은 문자열이어야 합니다.' })
-  region: string;
+  @ApiProperty({ example: "부산" })
+  @IsString()
+  region!: string;
 
-  @ApiPropertyOptional({ description: '대회장 주소', example: '서울특별시 강남구 테헤란로 123' })
+  @ApiProperty({ example: "유도, 주짓수" })
+  @IsString()
+  type!: string;
+
+  @ApiProperty({ example: "대회장 주소소" })
+  @IsString()
+  address!: string;
+
+  // 토큰에서 덮어씌울 값(요청 바디에 와도 무시)
+  @IsOptional() @IsInt() @Min(1) master_idx?: number;
+
+  @ApiProperty({ example: "2025-06-01" })
+  @IsDateString()
+  start_date!: string; // ISO 날짜 문자열
+
+  @ApiProperty({ example: "2025-05-01" })
+  @IsDateString()
+  request_start_date!: string;
+
+  @ApiProperty({ example: "2025-05-31" })
+  @IsDateString()
+  request_end_date!: string;
+
+  // 대회 상태 (기본값: 접수 중)
+  @ApiProperty({
+    example: CompetitionStatus.REGISTRATION,
+    enum: CompetitionStatus,
+    default: CompetitionStatus.REGISTRATION,
+  })
   @IsOptional()
-  @IsString({ message: '대회장 주소는 문자열이어야 합니다.' })
-  address?: string;
+  @IsEnum(CompetitionStatus)
+  status: CompetitionStatus = CompetitionStatus.REGISTRATION;
 
-  @ApiProperty({ description: '대회 타입', example: 'championship' })
-  @IsNotEmpty({ message: '대회 타입은 필수입니다.' })
-  @IsString({ message: '대회 타입은 문자열이어야 합니다.' })
-  type: string;
-
-  @ApiProperty({ description: '주최자 유저 idx', example: 1 })
-  @IsNotEmpty({ message: '주최자 idx는 필수입니다.' })
-  master_idx: number;
-
-  @ApiProperty({ description: '대회 시작일 (YYYY-MM-DD)', example: '2024-06-01' })
-  @IsNotEmpty({ message: '대회 시작일은 필수입니다.' })
-  @IsString({ message: '대회 시작일은 문자열이어야 합니다.' })
-  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: '올바른 날짜 형식이 아닙니다. YYYY-MM-DD 형식으로 입력해주세요.' })
-  start_date: string;
-
-  @ApiPropertyOptional({ description: '접수 시작일 (YYYY-MM-DD)', example: '2024-05-01' })
+  // 썸네일 URL (멀티파트 업로드 이후 값이 들어옴)
+  @ApiPropertyOptional({
+    example: "https://cdn.matchon.io/sample-thumbnail.jpg",
+  })
   @IsOptional()
-  @IsString({ message: '접수 시작일은 문자열이어야 합니다.' })
-  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: '올바른 날짜 형식이 아닙니다. YYYY-MM-DD 형식으로 입력해주세요.' })
-  request_start_date?: string;
-
-  @ApiPropertyOptional({ description: '접수 마감일 (YYYY-MM-DD)', example: '2024-05-31' })
-  @IsOptional()
-  @IsString({ message: '접수 마감일은 문자열이어야 합니다.' })
-  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: '올바른 날짜 형식이 아닙니다. YYYY-MM-DD 형식으로 입력해주세요.' })
-  request_end_date?: string;
-
-  @ApiPropertyOptional({ description: '대회 상태', enum: CompetitionStatus, example: CompetitionStatus.REGISTRATION, default: CompetitionStatus.REGISTRATION })
-  @IsOptional()
-  @IsEnum(CompetitionStatus, { message: '올바른 대회 상태가 아닙니다.' })
-  status?: CompetitionStatus;
-
-  @ApiPropertyOptional({ description: '썸네일 이미지 URL', example: 'https://matchons3.s3.ap-northeast-2.amazonaws.com/contest_thumbnail/1/abc123.jpg' })
-  @IsOptional()
-  @IsString({ message: '썸네일은 문자열이어야 합니다.' })
+  @IsString()
   thumbnail?: string;
 
-  @ApiPropertyOptional({ description: '참가자 명단 표시 여부', example: false, default: false })
+  // 선수 목록 공개 여부 (기본값: false)
+  @ApiPropertyOptional({ example: true, default: false })
   @IsOptional()
-  is_show_player?: boolean;
+  @IsBoolean()
+  is_show_player?: boolean = false;
 
-  @ApiPropertyOptional({ description: '대진표 표시 여부', example: false, default: false })
+  // 대진표 공개 여부 (기본값: false)
+  @ApiPropertyOptional({ example: false, default: false })
   @IsOptional()
-  is_show_bracket?: boolean;
+  @IsBoolean()
+  is_show_bracket?: boolean = false;
 }
 
+// multipart 전용 DTO(스웨거 노출용)
+export class CreateCompetitionMultipartDto extends CreateCompetitionDto {
+  @ApiPropertyOptional({ type: "string", format: "binary" })
+  thumbnail?: any; // swagger 표시 목적
+}

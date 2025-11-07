@@ -17,6 +17,8 @@ import {
   ParseFilePipe,
   MaxFileSizeValidator,
   FileTypeValidator,
+  UsePipes,
+  ValidationPipe,
 } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
 import {
@@ -31,7 +33,10 @@ import {
 } from "@nestjs/swagger";
 import { Response, Request } from "express";
 import { CompetitionService } from "./competition.service";
-import { CreateCompetitionDto } from "./dto/create-competition.dto";
+import {
+  CreateCompetitionDto,
+  CreateCompetitionMultipartDto,
+} from "./dto/create-competition.dto";
 import { UpdateCompetitionDto } from "./dto/update-competition.dto";
 import { CheckCodeDto } from "./dto/check-code.dto";
 import { sendSuccess, sendError } from "@/common/utils/response.util";
@@ -43,6 +48,7 @@ import { Competition } from "./entities/competition.entity";
 import { JwtAuthGuard } from "@/common/guards/jwt-auth.guard";
 import { plainToInstance } from "class-transformer";
 import { validate } from "class-validator";
+import { MultipartCoercionPipe } from "@/pipes/multipart-coerction.pipe";
 
 /**
  * 대회 컨트롤러
@@ -56,6 +62,7 @@ export class CompetitionController {
   /**
    * 대회 생성
    */
+
   @Post()
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth("JWT-auth")
@@ -65,100 +72,37 @@ export class CompetitionController {
     summary: "대회 생성",
     description: "새로운 대회를 등록합니다. 주최자 정보는 필수입니다.",
   })
-  @ApiBody({
-    schema: {
-      type: "object",
-      properties: {
-        name: { type: "string", example: "2024 전국 유도 선수권대회" },
-        description: {
-          type: "string",
-          example: "2024년 전국 유도 선수권대회입니다.",
-        },
-        region: { type: "string", example: "서울" },
-        type: { type: "string", example: "championship" },
-        master_idx: { type: "number", example: 1 },
-        start_date: { type: "string", example: "2024-06-01" },
-        request_start_date: { type: "string", example: "2024-05-01" },
-        request_end_date: { type: "string", example: "2024-05-31" },
-        status: { type: "string", example: "registration" },
-        thumbnail: { type: "string", format: "binary" },
-        is_show_player: { type: "boolean", example: true },
-      },
-    },
-  })
+  @ApiBody({ type: CreateCompetitionMultipartDto })
   @ApiResponse({ status: 201, description: "대회가 성공적으로 생성됨" })
-  @ApiResponse({ status: 400, type: ErrorResponseDto })
-  @ApiResponse({ status: 401, type: ErrorResponseDto })
+  @ApiResponse({ status: 400, description: "잘못된 요청" })
+  @ApiResponse({ status: 401, description: "인증 실패" })
   async create(
     @Req() req: Request,
-    @UploadedFile(
-      new ParseFilePipe({
-        fileIsRequired: false,
-        validators: [
-          new MaxFileSizeValidator({ maxSize: 5 * 1024 * 1024 }), // 5MB
-          new FileTypeValidator({ fileType: /(jpg|jpeg|png|gif|webp)$/ }),
-        ],
-      })
-    )
-    thumbnail?: Express.Multer.File,
-    @Res() res?: Response
+    @Body(new MultipartCoercionPipe()) body: CreateCompetitionDto,
+    @UploadedFile()
+    thumbnail: Express.Multer.File | undefined,
+    @Res() res: Response
   ): Promise<void> {
     try {
-      // form-data에서 데이터 파싱
-      const body = req.body;
-      const cleanedData: any = {};
-
-      // 문자열 필드 정리 (빈 문자열을 undefined로)
-      for (const key in body) {
-        if (body[key] === "") {
-          cleanedData[key] = undefined;
-        } else if (key === "master_idx" || key === "is_show_player") {
-          cleanedData[key] = body[key]
-            ? key === "master_idx"
-              ? parseInt(body[key], 10)
-              : body[key] === "true" || body[key] === true
-            : undefined;
-        } else {
-          cleanedData[key] = body[key];
-        }
-      }
-
-      // description 필드 처리 (desc로 올 수도 있음)
-      if (cleanedData.desc && !cleanedData.description) {
-        cleanedData.description = cleanedData.desc;
-        delete cleanedData.desc;
-      }
-
-      const createDto = plainToInstance(CreateCompetitionDto, cleanedData);
-      const errors = await validate(createDto);
-
-      if (errors.length > 0) {
-        const errorMessages = errors
-          .map((e) => Object.values(e.constraints || {}))
-          .flat();
-        sendError(res!, errorMessages.join(", "), HttpStatus.BAD_REQUEST);
-        return;
-      }
-
+     
+      // 토큰에서 주최자 ID 강제 지정
       const tokenPayload = (req as any).user;
-      createDto.master_idx = tokenPayload.sub;
+      body.master_idx = tokenPayload?.sub;
 
-      const competition = await this.competitionService.create(
-        createDto,
-        thumbnail
-      );
+      const competition = await this.competitionService.create(body, thumbnail);
+
       sendSuccess(
-        res!,
+        res,
         "대회가 성공적으로 생성되었습니다.",
         { competition },
         HttpStatus.CREATED
       );
     } catch (error: any) {
-      const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
+      console.log(error)
       sendError(
-        res!,
-        error.message || "대회 생성 중 오류가 발생했습니다.",
-        status
+        res,
+        error?.message || "대회 생성 중 오류가 발생했습니다.",
+        error?.status || HttpStatus.INTERNAL_SERVER_ERROR
       );
     }
   }
